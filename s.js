@@ -154,6 +154,21 @@
         );
     }
 
+    if (r?.items && Array.isArray(r.items)) {
+      const bI = ["BROADCAST","TROPHY","GAMING","LIVE","CLAPPERBOARD","TAB_LIBRARY","SUBSCRIPTIONS","YOUTUBE_SHORTS"];
+      const bB = ["FEtopics_podcasts","FEtopics_sports","FEtopics_gaming","FEtopics_live","FEtopics_movies","FEstorefront","FElibrary","FEsubscriptions","FEshorts"];
+      for (let n = 0; n < r.items.length; n++) {
+        if (r.items[n]?.guideSubscriptionsSectionRenderer) { r.items.splice(n, 1); n--; continue; }
+        const a = r.items[n]?.guideSectionRenderer;
+        if (a?.items) {
+          for (let o = 0; o < a.items.length; o++) {
+            const s = a.items[o]?.guideEntryRenderer, ic = s?.icon?.iconType || "", id = s?.navigationEndpoint?.browseEndpoint?.browseId || "";
+            if (s && (bI.includes(ic) || bB.includes(id) || ic.includes("SHORTS") || id.includes("shorts") || s.thumbnail)) { a.items.splice(o, 1); o--; }
+          }
+          if (a.items.length === 0) { r.items.splice(n, 1); n--; }
+        }
+      }
+    }
     return r;
   };
 
