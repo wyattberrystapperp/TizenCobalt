@@ -1,36 +1,22 @@
 // [Auto-Bypass Who's Watching on Startup]
 (function() {
-  let checks = 0;
-  const bypass = setInterval(() => {
-    checks++;
-    if (checks > 50) clearInterval(bypass);
-    const isPicker = Array.from(document.querySelectorAll('button, div, span')).some(
-      el => el.textContent && (el.textContent.includes("Watch as guest") || el.textContent.includes("Add account") || el.textContent.includes("Oglądaj jako gość"))
-    );
-    if (isPicker) {
-      const target = (document.activeElement && document.activeElement !== document.body) 
-        ? document.activeElement 
-        : document.querySelector('[idomkey="account-item"], [role="button"], button');
-      if (target) {
-        target.click();
-        target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true }));
-        clearInterval(bypass);
-      }
+  let done = false;
+  function triggerEnter(el) {
+    const ev = new KeyboardEvent('keyup', { bubbles: true, cancelable: true, key: 'Enter', code: 'Enter' });
+    Object.defineProperty(ev, 'keyCode', { get: () => 13 });
+    Object.defineProperty(ev, 'which', { get: () => 13 });
+    el.dispatchEvent(ev);
+  }
+  const check = setInterval(() => {
+    if (done) { clearInterval(check); return; }
+    const tile = document.querySelector('.ytLrCarouselAccountTile') || document.activeElement;
+    if (tile && tile.classList && tile.classList.contains('ytLrCarouselAccountTile')) {
+      done = true;
+      clearInterval(check);
+      triggerEnter(tile);
     }
   }, 100);
-})();
-
-let bgTimer = null;
-  document.addEventListener("visibilitychange", () => {
-    if (document.hidden) {
-      bgTimer = setTimeout(() => {
-        window.close();
-      }, 10 * 60 * 1000);
-    } else if (bgTimer) {
-      clearTimeout(bgTimer);
-      bgTimer = null;
-    }
-  });
+  setTimeout(() => clearInterval(check), 15000);
 })();
 
 // [Disable Voice Search & PiP]
