@@ -9,16 +9,4 @@ jobs:
         run: |
           wget -q https://github.com/reisxd/TizenTubeCobalt/releases/download/v2.0.2/cobalt-arm.apk
           unzip -q cobalt-arm.apk -d apk_out
-          python3 -c '
-          so = "apk_out/lib/armeabi-v7a/libchrobalt.so"
-          with open(so, "rb") as f:
-              b = f.read()
-          idx = 0
-          while True:
-              idx = b.find(b"jsdelivr", idx)
-              if idx == -1: break
-              s = b.rfind(b"\x00", 0, idx) + 1
-              e = b.find(b"\x00", idx)
-              print(f"OFFSET: {s} | LEN: {e-s} | URL: {b[s:e].decode(errors=\"ignore\")}")
-              idx += 8
-          '
+          python3 inspect_so.py
