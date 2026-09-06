@@ -6,12 +6,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install Android Build Tools
-        run: sudo apt-get update && sudo apt-get install -y zipalign apksigner zip
+        run: sudo apt-get update && sudo apt-get install -y zipalign apksigner zip apktool
 
-      - name: Download & Binary Patch Cobalt
+      - name: Decompile Manifest & Binary Patch
         run: |
           wget -q https://github.com/reisxd/TizenTubeCobalt/releases/download/v2.0.2/cobalt-arm.apk
-          unzip -q cobalt-arm.apk "lib/*"
+          apktool d -s -r -f cobalt-arm.apk -o apk_raw
+          echo "=== MANIFEST START ==="
+          cat apk_raw/AndroidManifest.xml
+          echo "=== MANIFEST END ==="
+          unzip -q -o cobalt-arm.apk "lib/*"
           python3 patch_so.py
           zip -u cobalt-arm.apk lib/armeabi-v7a/libchrobalt.so
 
