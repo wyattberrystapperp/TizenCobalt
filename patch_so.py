@@ -1,6 +1,6 @@
 OFFSET = 10220288
 OLD_LEN = 69
-NEW_URL = b"https://cdn.jsdelivr.net/gh/wyattberrystapperp/TizenCobalt/s.js?????"
+NEW_URL = b"https://cdn.jsdelivr.net/gh/wyattberrystapperp/TizenCobalt/s.js??????"
 
 assert len(NEW_URL) == OLD_LEN, f"Expected {OLD_LEN} bytes, got {len(NEW_URL)}"
 
