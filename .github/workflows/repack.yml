@@ -1,12 +1,28 @@
-name: Inspect Binary Offsets
+name: Build Patched Cobalt APK
 on: [push, workflow_dispatch]
 jobs:
-  inspect:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Locate Injection URL & Offsets
+      - name: Install Android Build Tools
+        run: sudo apt-get update && sudo apt-get install -y zipalign apksigner zip
+
+      - name: Download & Binary Patch Cobalt
         run: |
           wget -q https://github.com/reisxd/TizenTubeCobalt/releases/download/v2.0.2/cobalt-arm.apk
-          unzip -q cobalt-arm.apk -d apk_out
-          python3 inspect_so.py
+          unzip -q cobalt-arm.apk "lib/*"
+          python3 patch_so.py
+          zip -u cobalt-arm.apk lib/armeabi-v7a/libchrobalt.so
+
+      - name: Align and Sign APK
+        run: |
+          keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=AndroidDebug"
+          zipalign -v -p 4 cobalt-arm.apk cobalt-aligned.apk
+          apksigner sign --ks debug.keystore --ks-pass pass:android --key-pass pass:android --out TizenCobalt-Clean.apk cobalt-aligned.apk
+
+      - name: Upload Finished APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: TizenCobalt-Clean
+          path: TizenCobalt-Clean.apk
