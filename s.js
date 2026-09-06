@@ -1,6 +1,7 @@
-// [Persistent Auto-Bypass Who's Watching on Launch & Resume]
+// [Persistent Auto-Bypass with Force Focus]
 (function() {
   function triggerEnter(el) {
+    if (typeof el.focus === 'function') el.focus();
     const ev = new KeyboardEvent('keyup', { bubbles: true, cancelable: true, key: 'Enter', code: 'Enter' });
     Object.defineProperty(ev, 'keyCode', { get: () => 13 });
     Object.defineProperty(ev, 'which', { get: () => 13 });
@@ -13,10 +14,12 @@
     }
   }, true);
   setInterval(() => {
-    if (Date.now() - backTime < 3000) return;
-    const tile = (document.activeElement && document.activeElement.classList && document.activeElement.classList.contains('ytLrCarouselAccountTile'))
-      ? document.activeElement : document.querySelector('.ytLrCarouselAccountTile');
-    if (tile) triggerEnter(tile);
+    if (Date.now() - backTime < 2500) return;
+    const tile = document.querySelector('.ytLrCarouselAccountTile') || document.activeElement;
+    if (tile && (tile.classList.contains('ytLrCarouselAccountTile') || tile.closest('.ytLrCarouselAccountTile'))) {
+      const target = tile.classList.contains('ytLrCarouselAccountTile') ? tile : tile.closest('.ytLrCarouselAccountTile');
+      triggerEnter(target);
+    }
   }, 200);
 })();
 
