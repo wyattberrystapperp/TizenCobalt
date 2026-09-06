@@ -1,3 +1,9 @@
+// [Disable Voice Search & PiP]
+delete window.SpeechRecognition;
+delete window.webkitSpeechRecognition;
+if (navigator.mediaDevices) navigator.mediaDevices.getUserMedia = undefined;
+try { Object.defineProperty(document, "pictureInPictureEnabled", { get: () => false }); } catch(e){}
+
 // [Root Viewport Lock - Prevent Spatial Scroll Panning]
 (function() {
   const lock = () => {

@@ -1,26 +1,30 @@
 name: Build Patched Cobalt APK
 on: [push, workflow_dispatch]
-permissions:
-  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build & Export Manifest
+      - name: Install Android Build Tools
+        run: sudo apt-get update && sudo apt-get install -y zipalign apksigner zip
+
+      - name: Patch Manifest & Engine
         run: |
-          sudo apt-get update && sudo apt-get install -y zipalign apksigner zip apktool
           wget -q https://github.com/reisxd/TizenTubeCobalt/releases/download/v2.0.2/cobalt-arm.apk
-          apktool d -s -r -f cobalt-arm.apk -o apk_raw
-          cp apk_raw/AndroidManifest.xml ./
-          git config user.name "CI" && git config user.email "ci@github.com"
-          git add AndroidManifest.xml && git commit -m "chore: export manifest [skip ci]" && git push || true
-          unzip -q -o cobalt-arm.apk "lib/*" && python3 patch_so.py
+          python3 patch_manifest.py
+          zip -u -0 cobalt-arm.apk AndroidManifest.xml
+          unzip -q -o cobalt-arm.apk "lib/*"
+          python3 patch_so.py
           zip -u cobalt-arm.apk lib/armeabi-v7a/libchrobalt.so
+
+      - name: Align and Sign APK
+        run: |
           keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=AndroidDebug"
           zipalign -v -p 4 cobalt-arm.apk cobalt-aligned.apk
           apksigner sign --ks debug.keystore --ks-pass pass:android --key-pass pass:android --out TizenCobalt-Clean.apk cobalt-aligned.apk
-      - uses: actions/upload-artifact@v4
+
+      - name: Upload Finished APK
+        uses: actions/upload-artifact@v4
         with:
           name: TizenCobalt-Clean
           path: TizenCobalt-Clean.apk
