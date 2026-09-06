@@ -1,22 +1,27 @@
-// [Auto-Bypass Who's Watching on Startup]
+// [Auto-Bypass Who's Watching on Startup & Resume]
 (function() {
-  let done = false;
   function triggerEnter(el) {
     const ev = new KeyboardEvent('keyup', { bubbles: true, cancelable: true, key: 'Enter', code: 'Enter' });
     Object.defineProperty(ev, 'keyCode', { get: () => 13 });
     Object.defineProperty(ev, 'which', { get: () => 13 });
     el.dispatchEvent(ev);
   }
-  const check = setInterval(() => {
-    if (done) { clearInterval(check); return; }
-    const tile = document.querySelector('.ytLrCarouselAccountTile') || document.activeElement;
-    if (tile && tile.classList && tile.classList.contains('ytLrCarouselAccountTile')) {
-      done = true;
-      clearInterval(check);
-      triggerEnter(tile);
-    }
-  }, 100);
-  setTimeout(() => clearInterval(check), 15000);
+  function startBypass() {
+    let count = 0;
+    const interval = setInterval(() => {
+      count++;
+      if (count > 40) clearInterval(interval);
+      const tile = document.querySelector('.ytLrCarouselAccountTile') || document.activeElement;
+      if (tile && tile.classList && tile.classList.contains('ytLrCarouselAccountTile')) {
+        clearInterval(interval);
+        triggerEnter(tile);
+      }
+    }, 100);
+  }
+  startBypass();
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) startBypass();
+  });
 })();
 
 // [Disable Voice Search & PiP]
