@@ -1,0 +1,12 @@
+name: Purge jsDelivr CDN Cache
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "s.js"
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hit jsDelivr Purge API
+        run: curl -s "https://purge.jsdelivr.net/gh/wyattberrystapperp/TizenCobalt@main/s.js"
