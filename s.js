@@ -120,9 +120,28 @@ try { Object.defineProperty(document, "pictureInPictureEnabled", { get: () => fa
    *
    * Seems like for now dropping just the adPlacements is enough for YouTube TV
    */
+  const blockedTokens = ["sport", "podcast", "movie", "film", "live", "na żywo", "gaming", "gry", "subscription", "subskrypcj", "library", "bibliotek", "more", "więcej", "short"];
+  function stripGuideItems(obj) {
+    if (!obj || typeof obj !== "object") return;
+    for (let k in obj) {
+      if (Array.isArray(obj[k])) {
+        obj[k] = obj[k].filter(it => {
+          const target = it?.guideEntryRenderer || it?.pivotBarItemRenderer;
+          if (!target) return true;
+          const s = JSON.stringify(target).toLowerCase();
+          return !blockedTokens.some(tok => s.includes(tok));
+        });
+        obj[k].forEach(stripGuideItems);
+      } else if (typeof obj[k] === "object") {
+        stripGuideItems(obj[k]);
+      }
+    }
+  }
+
   const origParse = JSON.parse;
   JSON.parse = function () {
     const r = origParse.apply(this, arguments);
+    if (r) stripGuideItems(r);
     if (r.adPlacements && configRead("enableAdBlock")) {
       r.adPlacements = [];
     }
