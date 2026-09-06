@@ -1,4 +1,4 @@
-// [Auto-Bypass Who's Watching on Startup & Resume]
+// [Persistent Auto-Bypass Who's Watching on Launch & Resume]
 (function() {
   function triggerEnter(el) {
     const ev = new KeyboardEvent('keyup', { bubbles: true, cancelable: true, key: 'Enter', code: 'Enter' });
@@ -6,22 +6,18 @@
     Object.defineProperty(ev, 'which', { get: () => 13 });
     el.dispatchEvent(ev);
   }
-  function startBypass() {
-    let count = 0;
-    const interval = setInterval(() => {
-      count++;
-      if (count > 40) clearInterval(interval);
-      const tile = document.querySelector('.ytLrCarouselAccountTile') || document.activeElement;
-      if (tile && tile.classList && tile.classList.contains('ytLrCarouselAccountTile')) {
-        clearInterval(interval);
-        triggerEnter(tile);
-      }
-    }, 100);
-  }
-  startBypass();
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) startBypass();
-  });
+  let backTime = 0;
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' || e.keyCode === 27 || e.keyCode === 4) {
+      if (!location.hash.includes('watch')) backTime = Date.now();
+    }
+  }, true);
+  setInterval(() => {
+    if (Date.now() - backTime < 3000) return;
+    const tile = (document.activeElement && document.activeElement.classList && document.activeElement.classList.contains('ytLrCarouselAccountTile'))
+      ? document.activeElement : document.querySelector('.ytLrCarouselAccountTile');
+    if (tile) triggerEnter(tile);
+  }, 200);
 })();
 
 // [Disable Voice Search & PiP]
