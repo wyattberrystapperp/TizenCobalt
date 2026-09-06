@@ -1,3 +1,31 @@
+// [Double-Back to Exit & 10-Min Background Auto-Close]
+(function() {
+  let lastBack = 0;
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" || e.keyCode === 27 || e.keyCode === 4) {
+      if (!location.hash.includes("watch")) {
+        const now = Date.now();
+        if (now - lastBack < 1500) {
+          window.close();
+        }
+        lastBack = now;
+      }
+    }
+  }, true);
+
+  let bgTimer = null;
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      bgTimer = setTimeout(() => {
+        window.close();
+      }, 10 * 60 * 1000);
+    } else if (bgTimer) {
+      clearTimeout(bgTimer);
+      bgTimer = null;
+    }
+  });
+})();
+
 // [Disable Voice Search & PiP]
 delete window.SpeechRecognition;
 delete window.webkitSpeechRecognition;
