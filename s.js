@@ -1,3 +1,25 @@
+// [Auto-Bypass Who's Watching on Startup]
+(function() {
+  let checks = 0;
+  const bypass = setInterval(() => {
+    checks++;
+    if (checks > 50) clearInterval(bypass);
+    const isPicker = Array.from(document.querySelectorAll('button, div, span')).some(
+      el => el.textContent && (el.textContent.includes("Watch as guest") || el.textContent.includes("Add account") || el.textContent.includes("Oglądaj jako gość"))
+    );
+    if (isPicker) {
+      const target = (document.activeElement && document.activeElement !== document.body) 
+        ? document.activeElement 
+        : document.querySelector('[idomkey="account-item"], [role="button"], button');
+      if (target) {
+        target.click();
+        target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true }));
+        clearInterval(bypass);
+      }
+    }
+  }, 100);
+})();
+
 let bgTimer = null;
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
