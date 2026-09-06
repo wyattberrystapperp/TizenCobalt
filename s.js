@@ -1,34 +1,3 @@
-// [Persistent Auto-Bypass with Force Focus]
-(function() {
-  function triggerEnter(el) {
-    if (typeof el.focus === 'function') el.focus();
-    const ev = new KeyboardEvent('keyup', { bubbles: true, cancelable: true, key: 'Enter', code: 'Enter' });
-    Object.defineProperty(ev, 'keyCode', { get: () => 13 });
-    Object.defineProperty(ev, 'which', { get: () => 13 });
-    el.dispatchEvent(ev);
-  }
-  let backTime = 0;
-  window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' || e.keyCode === 27 || e.keyCode === 4) {
-      if (!location.hash.includes('watch')) backTime = Date.now();
-    }
-  }, true);
-  setInterval(() => {
-    if (Date.now() - backTime < 2500) return;
-    const tile = document.querySelector('.ytLrCarouselAccountTile') || document.activeElement;
-    if (tile && (tile.classList.contains('ytLrCarouselAccountTile') || tile.closest('.ytLrCarouselAccountTile'))) {
-      const target = tile.classList.contains('ytLrCarouselAccountTile') ? tile : tile.closest('.ytLrCarouselAccountTile');
-      triggerEnter(target);
-    }
-  }, 200);
-})();
-
-// [Disable Voice Search & PiP]
-delete window.SpeechRecognition;
-delete window.webkitSpeechRecognition;
-if (navigator.mediaDevices) navigator.mediaDevices.getUserMedia = undefined;
-try { Object.defineProperty(document, "pictureInPictureEnabled", { get: () => false }); } catch(e){}
-
 // [Root Viewport Lock - Prevent Spatial Scroll Panning]
 (function() {
   const lock = () => {
@@ -145,28 +114,9 @@ try { Object.defineProperty(document, "pictureInPictureEnabled", { get: () => fa
    *
    * Seems like for now dropping just the adPlacements is enough for YouTube TV
    */
-  const blockedTokens = ["sport", "podcast", "movie", "film", "live", "na żywo", "gaming", "gry", "subscription", "subskrypcj", "library", "bibliotek", "more", "więcej", "short"];
-  function stripGuideItems(obj) {
-    if (!obj || typeof obj !== "object") return;
-    for (let k in obj) {
-      if (Array.isArray(obj[k])) {
-        obj[k] = obj[k].filter(it => {
-          const target = it?.guideEntryRenderer || it?.pivotBarItemRenderer;
-          if (!target) return true;
-          const s = JSON.stringify(target).toLowerCase();
-          return !blockedTokens.some(tok => s.includes(tok));
-        });
-        obj[k].forEach(stripGuideItems);
-      } else if (typeof obj[k] === "object") {
-        stripGuideItems(obj[k]);
-      }
-    }
-  }
-
   const origParse = JSON.parse;
   JSON.parse = function () {
     const r = origParse.apply(this, arguments);
-    if (r) stripGuideItems(r);
     if (r.adPlacements && configRead("enableAdBlock")) {
       r.adPlacements = [];
     }
