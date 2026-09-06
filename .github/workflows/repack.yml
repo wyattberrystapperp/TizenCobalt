@@ -1,0 +1,14 @@
+name: Cobalt Repacker
+on: [push, workflow_dispatch]
+jobs:
+  repack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download and Inspect Cobalt APK
+        run: |
+          wget -q https://github.com/reisxd/TizenTubeCobalt/releases/download/v2.0.2/cobalt-arm.apk
+          unzip -q cobalt-arm.apk -d apk_out
+          echo "=== SEARCHING INJECTION STRINGS ==="
+          grep -rn "jsdelivr" apk_out/ || true
+          grep -rab "userScript" apk_out/lib/ || true
