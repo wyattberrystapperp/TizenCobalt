@@ -61,13 +61,31 @@ try {
     const mhi = mh?.shelfRenderer?.content?.horizontalListRenderer?.items;
     if (Array.isArray(mhi)) {
       mh.shelfRenderer.content.horizontalListRenderer.items = mhi.filter(i => {
-        if (i?.compactVideoRenderer?.movingThumbnailRenderer) delete i.compactVideoRenderer.movingThumbnailRenderer;
-        if (i?.tvVideoRenderer?.movingThumbnailRenderer) delete i.tvVideoRenderer.movingThumbnailRenderer;
+        const v = i?.compactVideoRenderer || i?.tvVideoRenderer || i?.gridVideoRenderer;
+        if (v) {
+          if (v.movingThumbnailRenderer) delete v.movingThumbnailRenderer;
+          if (Array.isArray(v.thumbnail?.thumbnails) && v.thumbnail.thumbnails.length > 2) {
+            v.thumbnail.thumbnails = v.thumbnail.thumbnails.filter(x => !x.width || x.width <= 480);
+          }
+        }
         return !i?.adSlotRenderer;
       });
     }
     const sl = r?.contents?.tvBrowseRenderer?.content?.tvSurfaceContentRenderer?.content?.sectionListRenderer;
-    if (Array.isArray(sl?.contents)) sl.contents = sl.contents.filter(s => s?.shelfRenderer?.tvhtml5ShelfRendererType !== "TVHTML5_SHELF_RENDERER_TYPE_SHORTS");
+    if (Array.isArray(sl?.contents)) {
+      sl.contents = sl.contents.filter(s => s?.shelfRenderer?.tvhtml5ShelfRendererType !== "TVHTML5_SHELF_RENDERER_TYPE_SHORTS");
+      sl.contents.forEach(s => {
+        const items = s?.shelfRenderer?.content?.horizontalListRenderer?.items;
+        if (Array.isArray(items)) {
+          items.forEach(i => {
+            const v = i?.compactVideoRenderer || i?.tvVideoRenderer || i?.gridVideoRenderer;
+            if (v && Array.isArray(v.thumbnail?.thumbnails) && v.thumbnail.thumbnails.length > 2) {
+              v.thumbnail.thumbnails = v.thumbnail.thumbnails.filter(x => !x.width || x.width <= 480);
+            }
+          });
+        }
+      });
+    }
     if (r?.items && Array.isArray(r.items)) {
       const bI = ["BROADCAST","TROPHY","GAMING","LIVE","CLAPPERBOARD","TAB_LIBRARY","SUBSCRIPTIONS","YOUTUBE_SHORTS"];
       const bB = ["FEtopics_podcasts","FEtopics_sports","FEtopics_gaming","FEtopics_live","FEtopics_movies","FEstorefront","FElibrary","FEsubscriptions","FEshorts"];
@@ -476,7 +494,7 @@ var cnt=0,tmr=setInterval(function(){try{var o=yo();if(o){o.exec(new o.cmd("relo
   s.textContent = `
     ytlr-moving-thumbnail-renderer, [idomkey*="movingThumbnail"], #cinematic-container, [idomkey*="cinematic"], .ytlr-cinematic-container-renderer, ytlr-storyboard-renderer, ytlr-thumbnail-preview-renderer, [idomkey*="storyboard"], [idomkey*="previewThumbnail"], .ytlr-scrubber-preview, ytlr-endscreen-renderer, [idomkey*="endscreen"] { display: none !important; }
     ytlr-overlay-renderer, [idomkey*="overlay"], .ytlr-dialog-renderer, ytlr-guide-renderer { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
-    [idomkey], ytlr-compact-metadata-renderer { box-shadow: none !important; text-shadow: none !important; }
+    ytlr-compact-metadata-renderer, ytlr-guide-entry-renderer, .ytlr-tile-renderer { box-shadow: none !important; text-shadow: none !important; contain: layout paint !important; }
     yt-focus-container, ytlr-guide-entry-renderer, ytlr-compact-metadata-renderer, .ytlr-tile-renderer { -webkit-transition-duration: 0.001s !important; transition-duration: 0.001s !important; }
   `;
   document.documentElement.appendChild(s);
