@@ -51,6 +51,11 @@ try {
     if (r.adSlots) {
       r.adSlots = [];
     }
+    if (r.storyboards) delete r.storyboards;
+    if (r.playerStoryboardSpecRenderer) delete r.playerStoryboardSpecRenderer;
+    if (r.storyboard) delete r.storyboard;
+    if (r.endscreen) delete r.endscreen;
+    if (r.paidContentOverlayRenderer) delete r.paidContentOverlayRenderer;
 
     const mh = r?.contents?.tvBrowseRenderer?.content?.tvSurfaceContentRenderer?.content?.sectionListRenderer?.contents?.[0];
     const mhi = mh?.shelfRenderer?.content?.horizontalListRenderer?.items;
@@ -320,16 +325,10 @@ try {
         this.segmentsoverlay.appendChild(elm);
       });
 
-      this.observer = new MutationObserver((mutations) => {
-        mutations.forEach((m) => {
-          if (m.removedNodes) {
-            for (const node of m.removedNodes) {
-              if (node === this.segmentsoverlay) {
-                this.slider.appendChild(this.segmentsoverlay);
-              }
-            }
-          }
-        });
+      this.observer = new MutationObserver(() => {
+        if (this.slider && this.segmentsoverlay && !this.slider.contains(this.segmentsoverlay)) {
+          this.slider.appendChild(this.segmentsoverlay);
+        }
       });
 
       let sliderAttempts = 0;
@@ -475,9 +474,10 @@ var cnt=0,tmr=setInterval(function(){try{var o=yo();if(o){o.exec(new o.cmd("relo
 (function(){
   var s = document.createElement("style");
   s.textContent = `
-    ytlr-moving-thumbnail-renderer, [idomkey*="movingThumbnail"], #cinematic-container, [idomkey*="cinematic"], .ytlr-cinematic-container-renderer { display: none !important; }
+    ytlr-moving-thumbnail-renderer, [idomkey*="movingThumbnail"], #cinematic-container, [idomkey*="cinematic"], .ytlr-cinematic-container-renderer, ytlr-storyboard-renderer, ytlr-thumbnail-preview-renderer, [idomkey*="storyboard"], [idomkey*="previewThumbnail"], .ytlr-scrubber-preview, ytlr-endscreen-renderer, [idomkey*="endscreen"] { display: none !important; }
     ytlr-overlay-renderer, [idomkey*="overlay"], .ytlr-dialog-renderer, ytlr-guide-renderer { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
     [idomkey], ytlr-compact-metadata-renderer { box-shadow: none !important; text-shadow: none !important; }
+    yt-focus-container, ytlr-guide-entry-renderer, ytlr-compact-metadata-renderer, .ytlr-tile-renderer { -webkit-transition-duration: 0.001s !important; transition-duration: 0.001s !important; }
   `;
   document.documentElement.appendChild(s);
 })();
