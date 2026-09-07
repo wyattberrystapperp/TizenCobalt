@@ -52,10 +52,10 @@ try {
       const v = i.compactVideoRenderer || i.tvVideoRenderer || i.gridVideoRenderer || i.tileRenderer;
       if (v) {
         if (v.movingThumbnailRenderer) delete v.movingThumbnailRenderer;
-        if (v.navigationEndpoint?.reelWatchEndpoint) return false;
-        const url = v.navigationEndpoint?.commandMetadata?.webCommandMetadata?.url || "";
+        if (v.navigationEndpoint && v.navigationEndpoint.reelWatchEndpoint) return false;
+        const url = v.navigationEndpoint && v.navigationEndpoint.commandMetadata && v.navigationEndpoint.commandMetadata.webCommandMetadata && v.navigationEndpoint.commandMetadata.webCommandMetadata.url || "";
         if (url.includes("/shorts/")) return false;
-        if (Array.isArray(v.thumbnail?.thumbnails) && v.thumbnail.thumbnails.length > 1) {
+        if (Array.isArray(v.thumbnail && v.thumbnail.thumbnails) && v.thumbnail.thumbnails.length > 1) {
           const best = v.thumbnail.thumbnails.filter(x => !x.width || x.width <= 480).pop() || v.thumbnail.thumbnails[0];
           v.thumbnail.thumbnails = [best];
         }
@@ -67,33 +67,33 @@ try {
       const sr = s.shelfRenderer;
       if (!sr) return true;
       if (sr.tvhtml5ShelfRendererType === "TVHTML5_SHELF_RENDERER_TYPE_SHORTS") return false;
-      const bId = (sr.endpoint?.browseEndpoint?.browseId || "").toLowerCase();
-      const title = (sr.title?.runs?.[0]?.text || "").toLowerCase();
+      const bId = (sr.endpoint && sr.endpoint.browseEndpoint && sr.endpoint.browseEndpoint.browseId || "").toLowerCase();
+      const title = (sr.title && sr.title.runs && sr.title.runs[0] && sr.title.runs[0].text || "").toLowerCase();
       if (bId.includes("shorts") || title.includes("shorts")) return false;
-      const hl = sr.content?.horizontalListRenderer;
-      if (Array.isArray(hl?.items)) hl.items = hl.items.filter(cleanItem);
+      const hl = sr.content && sr.content.horizontalListRenderer;
+      if (Array.isArray(hl && hl.items)) hl.items = hl.items.filter(cleanItem);
       return true;
     };
     const cleanSectionList = (sl) => {
-      if (Array.isArray(sl?.contents)) {
+      if (Array.isArray(sl && sl.contents)) {
         sl.contents = sl.contents.filter(cleanShelf);
         sl.contents.forEach(s => {
-          const hl = s?.shelfRenderer?.content?.horizontalListRenderer;
-          if (Array.isArray(hl?.items)) hl.items = hl.items.filter(cleanItem);
+          const hl = s && s.shelfRenderer && s.shelfRenderer.content && s.shelfRenderer.content.horizontalListRenderer;
+          if (Array.isArray(hl && hl.items)) hl.items = hl.items.filter(cleanItem);
         });
       }
     };
-    const sl = r?.contents?.tvBrowseRenderer?.content?.tvSurfaceContentRenderer?.content?.sectionListRenderer;
+    const sl = r && r.contents && r.contents.tvBrowseRenderer && r.contents.tvBrowseRenderer.content && r.contents.tvBrowseRenderer.content.tvSurfaceContentRenderer && r.contents.tvBrowseRenderer.content.tvSurfaceContentRenderer.content && r.contents.tvBrowseRenderer.content.tvSurfaceContentRenderer.content.sectionListRenderer;
     if (sl) cleanSectionList(sl);
-    const contSl = r?.continuationContents?.sectionListContinuation;
+    const contSl = r && r.continuationContents && r.continuationContents.sectionListContinuation;
     if (contSl) cleanSectionList(contSl);
-    const contHl = r?.continuationContents?.horizontalListContinuation;
-    if (Array.isArray(contHl?.items)) contHl.items = contHl.items.filter(cleanItem);
-    const watchSl = r?.contents?.tvWatchNextRenderer?.content?.tvSurfaceContentRenderer?.content?.sectionListRenderer;
+    const contHl = r && r.continuationContents && r.continuationContents.horizontalListContinuation;
+    if (Array.isArray(contHl && contHl.items)) contHl.items = contHl.items.filter(cleanItem);
+    const watchSl = r && r.contents && r.contents.tvWatchNextRenderer && r.contents.tvWatchNextRenderer.content && r.contents.tvWatchNextRenderer.content.tvSurfaceContentRenderer && r.contents.tvWatchNextRenderer.content.tvSurfaceContentRenderer.content && r.contents.tvWatchNextRenderer.content.tvSurfaceContentRenderer.content.sectionListRenderer;
     if (watchSl) cleanSectionList(watchSl);
-    const searchSl = r?.contents?.tvSearchRenderer?.content?.tvSurfaceContentRenderer?.content?.sectionListRenderer;
+    const searchSl = r && r.contents && r.contents.tvSearchRenderer && r.contents.tvSearchRenderer.content && r.contents.tvSearchRenderer.content.tvSurfaceContentRenderer && r.contents.tvSearchRenderer.content.tvSurfaceContentRenderer.content && r.contents.tvSearchRenderer.content.tvSurfaceContentRenderer.content.sectionListRenderer;
     if (searchSl) cleanSectionList(searchSl);
-    if (r?.items && Array.isArray(r.items)) {
+    if (r && r.items && Array.isArray(r.items)) {
       const bI = ["BROADCAST","TROPHY","GAMING","LIVE","CLAPPERBOARD","TAB_LIBRARY","SUBSCRIPTIONS","YOUTUBE_SHORTS"];
       const bB = ["FEtopics_podcasts","FEtopics_sports","FEtopics_gaming","FEtopics_live","FEtopics_movies","FEstorefront","FElibrary","FEsubscriptions","FEshorts"];
       r.items = r.items.filter(item => {
@@ -101,10 +101,10 @@ try {
         const a = item.guideSectionRenderer;
         if (a && Array.isArray(a.items)) {
           a.items = a.items.filter(entry => {
-            const s = entry?.guideEntryRenderer;
+            const s = entry && entry.guideEntryRenderer;
             if (!s) return true;
-            const ic = s?.icon?.iconType || "";
-            const id = s?.navigationEndpoint?.browseEndpoint?.browseId || "";
+            const ic = s && s.icon && s.icon.iconType || "";
+            const id = s && s.navigationEndpoint && s.navigationEndpoint.browseEndpoint && s.navigationEndpoint.browseEndpoint.browseId || "";
             return !(bI.includes(ic) || bB.includes(id) || ic.includes("SHORTS") || id.includes("shorts") || s.thumbnail);
           });
           return a.items.length > 0;
