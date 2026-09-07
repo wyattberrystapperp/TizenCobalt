@@ -8,5 +8,8 @@ jobs:
   purge:
     runs-on: ubuntu-latest
     steps:
-      - name: Hit jsDelivr Purge API
-        run: curl -s "https://purge.jsdelivr.net/gh/wyattberrystapperp/TizenCobalt@main/s.js"
+      - name: Purge Edge CDN
+        run: |
+          curl -s -S -X POST https://purge.jsdelivr.net/ \
+            -H "Content-Type: application/json" \
+            -d '{"path":["/gh/wyattberrystapperp/TizenCobalt/s.js","/gh/wyattberrystapperp/TizenCobalt/s.js??????"]}'
