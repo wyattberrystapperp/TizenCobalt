@@ -8,7 +8,10 @@
     return res;
   };
   if(window.fetch){ var origF = window.fetch; window.fetch = function(inp){ var u = typeof inp === "string" ? inp : (inp && (inp.url || inp.href)); if(isLog(u)) return Promise.resolve(new Response("", { status: 204 })); return origF.apply(this, arguments); }; }
-  if(navigator.sendBeacon){ var origB = navigator.sendBeacon.bind(navigator); navigator.sendBeacon = function(u){ return isLog(u) ? true : origB.apply(this, arguments); }; }
+  if(navigator.sendBeacon){ var origB = navigator.sendBeacon.bind(navigator); navigator.sendBeacon = function(u){
+    var target = typeof u === "string" ? u : (u && (u.href || u.url));
+    return isLog(target) ? true : origB.apply(this, arguments);
+  }; }
 })();
 // [Low-Memory Profile]
 try {
@@ -51,23 +54,33 @@ try {
 
     const mh = r?.contents?.tvBrowseRenderer?.content?.tvSurfaceContentRenderer?.content?.sectionListRenderer?.contents?.[0];
     const mhi = mh?.shelfRenderer?.content?.horizontalListRenderer?.items;
-    if (Array.isArray(mhi)) mh.shelfRenderer.content.horizontalListRenderer.items = mhi.filter(i => !i?.adSlotRenderer);
+    if (Array.isArray(mhi)) {
+      mh.shelfRenderer.content.horizontalListRenderer.items = mhi.filter(i => {
+        if (i?.compactVideoRenderer?.movingThumbnailRenderer) delete i.compactVideoRenderer.movingThumbnailRenderer;
+        if (i?.tvVideoRenderer?.movingThumbnailRenderer) delete i.tvVideoRenderer.movingThumbnailRenderer;
+        return !i?.adSlotRenderer;
+      });
+    }
     const sl = r?.contents?.tvBrowseRenderer?.content?.tvSurfaceContentRenderer?.content?.sectionListRenderer;
     if (Array.isArray(sl?.contents)) sl.contents = sl.contents.filter(s => s?.shelfRenderer?.tvhtml5ShelfRendererType !== "TVHTML5_SHELF_RENDERER_TYPE_SHORTS");
     if (r?.items && Array.isArray(r.items)) {
       const bI = ["BROADCAST","TROPHY","GAMING","LIVE","CLAPPERBOARD","TAB_LIBRARY","SUBSCRIPTIONS","YOUTUBE_SHORTS"];
       const bB = ["FEtopics_podcasts","FEtopics_sports","FEtopics_gaming","FEtopics_live","FEtopics_movies","FEstorefront","FElibrary","FEsubscriptions","FEshorts"];
-      for (let n = 0; n < r.items.length; n++) {
-        if (r.items[n]?.guideSubscriptionsSectionRenderer) { r.items.splice(n, 1); n--; continue; }
-        const a = r.items[n]?.guideSectionRenderer;
-        if (a?.items) {
-          for (let o = 0; o < a.items.length; o++) {
-            const s = a.items[o]?.guideEntryRenderer, ic = s?.icon?.iconType || "", id = s?.navigationEndpoint?.browseEndpoint?.browseId || "";
-            if (s && (bI.includes(ic) || bB.includes(id) || ic.includes("SHORTS") || id.includes("shorts") || s.thumbnail)) { a.items.splice(o, 1); o--; }
-          }
-          if (a.items.length === 0) { r.items.splice(n, 1); n--; }
+      r.items = r.items.filter(item => {
+        if (!item || item.guideSubscriptionsSectionRenderer) return false;
+        const a = item.guideSectionRenderer;
+        if (a && Array.isArray(a.items)) {
+          a.items = a.items.filter(entry => {
+            const s = entry?.guideEntryRenderer;
+            if (!s) return true;
+            const ic = s?.icon?.iconType || "";
+            const id = s?.navigationEndpoint?.browseEndpoint?.browseId || "";
+            return !(bI.includes(ic) || bB.includes(id) || ic.includes("SHORTS") || id.includes("shorts") || s.thumbnail);
+          });
+          return a.items.length > 0;
         }
-      }
+        return true;
+      });
     }
     return r;
   };
@@ -264,6 +277,7 @@ try {
     getSkippableCategories() { return ["sponsor","intro","outro","interaction","selfpromo","music_offtopic"]; }
 
     attachVideo() {
+      if (!this.active) return;
       clearTimeout(this.attachVideoTimeout);
       this.attachVideoTimeout = null;
 
@@ -339,7 +353,7 @@ try {
     const cur = this.video.currentTime;
     for (let s of this.segments) {
       if (cur >= s.segment[0] && cur < s.segment[1]) {
-        if (this.skippableCategories.includes(s.category)) { this.video.currentTime = s.segment[1]; break; }
+        if (this.skippableCategories.includes(s.category)) { this.video.currentTime = s.segment[1] + 0.05; break; }
       }
     }
   }
@@ -409,7 +423,7 @@ try {
   })();
 
 (function(){function b(){try{var r=localStorage.getItem("yt.leanback.default::recurring_actions"),t=r?JSON.parse(r):{data:{data:{}}};t.data=t.data||{};t.data.data=t.data.data||{};var f=Date.now()+604800000;["startup-screen-account-selector-with-guest","whos_watching_fullscreen_zero_accounts","startup-screen-signed-out-welcome-back"].forEach(function(k){t.data.data[k]=t.data.data[k]||{};t.data.data[k].lastFired=f;});localStorage.setItem("yt.leanback.default::recurring_actions",JSON.stringify(t));}catch(e){}}
-b();var bi=setInterval(b,2000);setTimeout(function(){clearInterval(bi);},10000);
+b();var bi=setInterval(b,2000);setTimeout(function(){clearInterval(bi);},20000);
 var hi=setInterval(function(){if(typeof window._yttv==="object"&&window._yttv){var ok=!1;for(var k in window._yttv){var m=window._yttv[k];if(m&&m.instance&&typeof m.instance.resolveCommand==="function"&&!m.instance._exitH){(function(inst){var o=inst.resolveCommand;inst._exitH=!0;inst.resolveCommand=function(c,n){var u;if(c&&c.requestAccountSelectorCommand&&"ACCOUNT_EVENT_TRIGGER_ON_EXIT"===(null===(u=c.requestAccountSelectorCommand)||void 0===u||null===(u=u.identityActionContext)||void 0===u?void 0:u.eventTrigger))return o.call(this,{signalAction:{signal:"EXIT_APP"}}),!1;return o.call(this,c,n);};})(m.instance);ok=!0;}}if(ok)clearInterval(hi);}},250);})();
 
 (function(){function yo(){var e,t,d;if(!window._yttv)return null;for(var i in window._yttv){var m=window._yttv[i];if(m&&m.getInstance){var o=m.getInstance();if(m.toString().includes("ytlrActionRouter"))e=o;else if(o){for(var s of Object.getOwnPropertyNames(Object.getPrototypeOf(o)||{})){if(typeof o[s]==="function"&&o[s].toString().includes("ytlrActionRouter")){t=o[s];e=o;}}}}if(typeof m==="function"&&m.toString().includes("this.actionName"))d=m;}if(e&&!t){for(var c of Object.getOwnPropertyNames(Object.getPrototypeOf(e)||{})){if(typeof e[c]==="function"&&e[c].toString().includes("ytlrActionRouter"))t=e[c];}}return(e&&t&&d)?{exec:t.bind(e),cmd:d}:null;}
