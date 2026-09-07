@@ -368,6 +368,9 @@ try {
     scheduleSkip() {
     if (!this.active || !this.video || this.video.paused || !this.segments) return;
     const cur = this.video.currentTime;
+    const sec = Math.floor(cur);
+    if (sec === this._lastSec) return;
+    this._lastSec = sec;
     for (let s of this.segments) {
       if (cur >= s.segment[0] && cur < s.segment[1]) {
         if (this.skippableCategories.includes(s.category)) { this.video.currentTime = s.segment[1] + 0.05; break; }
@@ -465,9 +468,11 @@ var cnt=0,tmr=setInterval(function(){try{var o=yo();if(o){o.exec(new o.cmd("relo
     if(!this._trimHook){
       this._trimHook = true;
       this._lastTrim = 0;
+      this._v = null;
       this.addEventListener("updateend", function(){
         try {
-          var v = document.querySelector("video");
+          if(!this._v || !this._v.isConnected) this._v = document.querySelector("video");
+          var v = this._v;
           var now = Date.now();
           if(v && !v.paused && !this.updating && this.buffered.length > 0 && (now - this._lastTrim > 10000)){
             var bStart = this.buffered.start(0);
