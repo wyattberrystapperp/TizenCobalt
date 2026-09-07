@@ -1,5 +1,10 @@
 name: Build Patched Cobalt APK
-on: [push, workflow_dispatch]
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - patch_so.py
+      - .github/workflows/repack.yml
 jobs:
   build:
     runs-on: ubuntu-latest
