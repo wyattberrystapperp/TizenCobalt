@@ -73,15 +73,30 @@ try {
     }
     const sl = r?.contents?.tvBrowseRenderer?.content?.tvSurfaceContentRenderer?.content?.sectionListRenderer;
     if (Array.isArray(sl?.contents)) {
-      sl.contents = sl.contents.filter(s => s?.shelfRenderer?.tvhtml5ShelfRendererType !== "TVHTML5_SHELF_RENDERER_TYPE_SHORTS");
+      sl.contents = sl.contents.filter(s => {
+        if (s?.reelShelfRenderer) return false;
+        const sr = s?.shelfRenderer;
+        if (!sr) return true;
+        if (sr.tvhtml5ShelfRendererType === "TVHTML5_SHELF_RENDERER_TYPE_SHORTS") return false;
+        const bId = sr.endpoint?.browseEndpoint?.browseId || "";
+        const title = sr.title?.runs?.[0]?.text || "";
+        return !bId.toLowerCase().includes("shorts") && !title.toLowerCase().includes("shorts");
+      });
       sl.contents.forEach(s => {
-        const items = s?.shelfRenderer?.content?.horizontalListRenderer?.items;
-        if (Array.isArray(items)) {
-          items.forEach(i => {
+        const hList = s?.shelfRenderer?.content?.horizontalListRenderer;
+        if (Array.isArray(hList?.items)) {
+          hList.items = hList.items.filter(i => {
+            if (i?.reelItemRenderer) return false;
             const v = i?.compactVideoRenderer || i?.tvVideoRenderer || i?.gridVideoRenderer;
-            if (v && Array.isArray(v.thumbnail?.thumbnails) && v.thumbnail.thumbnails.length > 2) {
-              v.thumbnail.thumbnails = v.thumbnail.thumbnails.filter(x => !x.width || x.width <= 480);
+            if (v) {
+              if (v.navigationEndpoint?.reelWatchEndpoint) return false;
+              const url = v.navigationEndpoint?.commandMetadata?.webCommandMetadata?.url || "";
+              if (url.includes("/shorts/")) return false;
+              if (Array.isArray(v.thumbnail?.thumbnails) && v.thumbnail.thumbnails.length > 2) {
+                v.thumbnail.thumbnails = v.thumbnail.thumbnails.filter(x => !x.width || x.width <= 480);
+              }
             }
+            return true;
           });
         }
       });
@@ -497,7 +512,7 @@ var cnt=0,tmr=setInterval(function(){try{var o=yo();if(o){o.exec(new o.cmd("relo
 (function(){
   var s = document.createElement("style");
   s.textContent = `
-    ytlr-moving-thumbnail-renderer, [idomkey*="movingThumbnail"], #cinematic-container, [idomkey*="cinematic"], .ytlr-cinematic-container-renderer, ytlr-storyboard-renderer, ytlr-thumbnail-preview-renderer, [idomkey*="storyboard"], [idomkey*="previewThumbnail"], .ytlr-scrubber-preview, ytlr-endscreen-renderer, [idomkey*="endscreen"] { display: none !important; }
+    ytlr-moving-thumbnail-renderer, [idomkey*="movingThumbnail"], #cinematic-container, [idomkey*="cinematic"], .ytlr-cinematic-container-renderer, ytlr-storyboard-renderer, ytlr-thumbnail-preview-renderer, [idomkey*="storyboard"], [idomkey*="previewThumbnail"], .ytlr-scrubber-preview, ytlr-endscreen-renderer, [idomkey*="endscreen"], ytlr-reel-shelf-renderer, ytlr-reel-item-renderer, [idomkey*="reel"], [idomkey*="Shorts"], [idomkey*="shorts"], .ytlr-reel-shelf-renderer { display: none !important; }
     ytlr-overlay-renderer, [idomkey*="overlay"], .ytlr-dialog-renderer, ytlr-guide-renderer { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
     ytlr-compact-metadata-renderer, ytlr-guide-entry-renderer, .ytlr-tile-renderer { box-shadow: none !important; text-shadow: none !important; contain: layout paint !important; }
     yt-focus-container, ytlr-guide-entry-renderer, ytlr-compact-metadata-renderer, .ytlr-tile-renderer { -webkit-transition-duration: 0.001s !important; transition-duration: 0.001s !important; }
