@@ -420,3 +420,14 @@ var cnt=0,tmr=setInterval(function(){try{var o=yo();if(o){o.exec(new o.cmd("relo
     return origAppend.call(this, buf);
   };
 })();
+
+// [GPU Texture & Shader Shield]
+(function(){
+  var s = document.createElement("style");
+  s.textContent = `
+    #cinematic-container, [idomkey*="cinematic"], .ytlr-cinematic-container-renderer { display: none !important; }
+    ytlr-overlay-renderer, [idomkey*="overlay"], .ytlr-dialog-renderer, ytlr-guide-renderer { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+    [idomkey], ytlr-compact-metadata-renderer { box-shadow: none !important; text-shadow: none !important; }
+  `;
+  document.documentElement.appendChild(s);
+})();
