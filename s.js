@@ -2,8 +2,12 @@
 (function(){
   var isLog = function(u){ return typeof u === "string" && (u.includes("/log_event") || u.includes("/api/stats/qoe")); };
   var origO = XMLHttpRequest.prototype.open;
-  XMLHttpRequest.prototype.open = function(m, u){ if(isLog(u)){ this.send = function(){}; return; } return origO.apply(this, arguments); };
-  if(window.fetch){ var origF = window.fetch; window.fetch = function(inp){ var u = typeof inp === "string" ? inp : (inp && inp.url); if(isLog(u)) return Promise.resolve(new Response("", { status: 204 })); return origF.apply(this, arguments); }; }
+  XMLHttpRequest.prototype.open = function(m, u){
+    var res = origO.apply(this, arguments);
+    if(isLog(u)){ this.send = function(){}; }
+    return res;
+  };
+  if(window.fetch){ var origF = window.fetch; window.fetch = function(inp){ var u = typeof inp === "string" ? inp : (inp && (inp.url || inp.href)); if(isLog(u)) return Promise.resolve(new Response("", { status: 204 })); return origF.apply(this, arguments); }; }
   if(navigator.sendBeacon){ var origB = navigator.sendBeacon.bind(navigator); navigator.sendBeacon = function(u){ return isLog(u) ? true : origB.apply(this, arguments); }; }
 })();
 // [Low-Memory Profile]
@@ -342,6 +346,12 @@ try {
 
     destroy() {
       this.active = false;
+      if (this.video) {
+        this.video.removeEventListener("timeupdate",
+          this.scheduleSkipHandler);
+        this.video.removeEventListener("durationchange",
+          this.durationChangeHandler);
+      }
       this.segments = null; this.video = null; this.slider = null;
 
       if (this.nextSkipTimeout) {
@@ -369,14 +379,7 @@ try {
         this.segmentsoverlay = null;
       }
 
-      if (this.video) {
-        this.video.removeEventListener("play", this.scheduleSkipHandler);
-        this.video.removeEventListener(
-          "durationchange",
-          this.durationChangeHandler
-        );
       }
-    }
   }
 
   // When this global variable was declared using let and two consecutive hashchange
@@ -388,7 +391,8 @@ try {
 
   window.sponsorblock = null;
   const _onNav = () => {
-    const match = location.hash.match(/[?&]v=([^&]+)/);
+    const targetUrl = location.hash + " " + location.search;
+    const match = targetUrl.match(/[?&]v=([^&#\s]+)/);
     const id = match ? match[1] : null;
     if (id && (!window.sponsorblock || window.sponsorblock.videoID != id)) {
       if (window.sponsorblock) { window.sponsorblock.destroy(); window.sponsorblock = null; }
@@ -411,20 +415,41 @@ var hi=setInterval(function(){if(typeof window._yttv==="object"&&window._yttv){v
 (function(){function yo(){var e,t,d;if(!window._yttv)return null;for(var i in window._yttv){var m=window._yttv[i];if(m&&m.getInstance){var o=m.getInstance();if(m.toString().includes("ytlrActionRouter"))e=o;else if(o){for(var s of Object.getOwnPropertyNames(Object.getPrototypeOf(o)||{})){if(typeof o[s]==="function"&&o[s].toString().includes("ytlrActionRouter")){t=o[s];e=o;}}}}if(typeof m==="function"&&m.toString().includes("this.actionName"))d=m;}if(e&&!t){for(var c of Object.getOwnPropertyNames(Object.getPrototypeOf(e)||{})){if(typeof e[c]==="function"&&e[c].toString().includes("ytlrActionRouter"))t=e[c];}}return(e&&t&&d)?{exec:t.bind(e),cmd:d}:null;}
 var cnt=0,tmr=setInterval(function(){try{var o=yo();if(o){o.exec(new o.cmd("reloadGuideAction"));clearInterval(tmr);}}catch(x){}if(++cnt>30)clearInterval(tmr);},500);})();
 
-(function(){var re=/^(Podcasts|Sports|Gaming|Live|Movies.*|Library|Subscriptions?|Shorts)$/i;function sweep(){var g=document.querySelector("ytlr-guide-response");if(!g)return;var els=g.querySelectorAll("yt-focus-container, [idomkey]");for(var i=0;i<els.length;i++){var el=els[i],t=(el.textContent||"").trim();if(re.test(t)){var p=el.closest("ytlr-guide-entry-renderer, yt-focus-container, [idomkey]")||el;p.style.setProperty("display","none","important");p.setAttribute("tabindex","-1");}}}new MutationObserver(sweep).observe(document.documentElement,{childList:true,subtree:true});})();
+(function(){var re=/^(Podcasts|Sports|Gaming|Live|Movies.*|Library|Subscriptions?|Shorts)$/i;function sweep(){var g=document.querySelector("ytlr-guide-response");if(!g)return;var els=g.querySelectorAll("yt-focus-container, [idomkey]");for(var i=0;i<els.length;i++){var el=els[i],t=(el.textContent||"").trim();if(re.test(t)){var p=el.closest("ytlr-guide-entry-renderer, yt-focus-container, [idomkey]")||el;p.style.setProperty("display","none","important");p.setAttribute("tabindex","-1");}}}var rootObs = new MutationObserver(function(){
+    var g = document.querySelector(
+      "ytlr-guide-response, ytlr-guide-renderer");
+    if(g){
+      rootObs.disconnect();
+      sweep(g);
+      new MutationObserver(function(){ sweep(g); })
+        .observe(g, {childList:true, subtree:true});
+    }
+  });
+  rootObs.observe(document.documentElement, {childList:true, subtree:true});})();
 
 // [Active MSE Buffer Trimmer]
 (function(){
   var origAppend = SourceBuffer.prototype.appendBuffer;
   SourceBuffer.prototype.appendBuffer = function(buf){
-    try {
-      var v = document.querySelector("video");
-      if(v && v.currentTime > 45 && !this.updating && this.buffered.length > 0){
-        if(this.buffered.start(0) < v.currentTime - 30){
-          this.remove(0, v.currentTime - 30);
-        }
-      }
-    } catch(e){}
+    if(!this._trimHook){
+      this._trimHook = true;
+      this._lastTrim = 0;
+      this.addEventListener("updateend", function(){
+        try {
+          var v = document.querySelector("video");
+          var now = Date.now();
+          if(v && !v.paused && v.currentTime > 45 &&
+             !this.updating && this.buffered.length > 0 &&
+             (now - this._lastTrim > 10000)){
+            var target = v.currentTime - 30;
+            if(this.buffered.start(0) < target){
+              this._lastTrim = now;
+              this.remove(0, target);
+            }
+          }
+        } catch(e){}
+      });
+    }
     return origAppend.call(this, buf);
   };
 })();
