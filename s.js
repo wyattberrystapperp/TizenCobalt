@@ -1,107 +1,7 @@
-// [Root Viewport Lock - Prevent Spatial Scroll Panning]
-(function() {
-  const lock = () => {
-    if (window.scrollX !== 0 || window.scrollY !== 0) window.scrollTo(0, 0);
-    if (document.documentElement.scrollTop !== 0) document.documentElement.scrollTop = 0;
-  };
-  window.addEventListener('scroll', lock, { passive: true });
-  window.addEventListener('resize', lock, { passive: true });
-  
-  const s = document.createElement('style');
-  s.textContent = `
-    html, body {
-      overflow: hidden !important;
-      position: fixed !important;
-      width: 100vw !important;
-      height: 100vh !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      top: 0 !important;
-      left: 0 !important;
-    }
-  `;
-  document.documentElement.appendChild(s);
-})();
-
-// [Tectonic GPU & Telemetry Shield - Fully Hardened]
-(function() {
-  const isPing = (u) => typeof u === "string" && (u.includes("/api/stats/") || u.includes("/log_event"));
-  const origOpen = XMLHttpRequest.prototype.open;
-  XMLHttpRequest.prototype.open = function(m, u) {
-    if (isPing(u)) { this.send = () => {}; return; }
-    return origOpen.apply(this, arguments);
-  };
-  if (window.fetch) {
-    const origF = window.fetch;
-    window.fetch = function(inp) {
-      const u = typeof inp === "string" ? inp : (inp && inp.url);
-      if (isPing(u)) return Promise.resolve(new Response(""));
-      return origF.apply(this, arguments);
-    };
-  }
-  if (navigator.sendBeacon) {
-    const origB = navigator.sendBeacon.bind(navigator);
-    navigator.sendBeacon = (u) => isPing(u) ? true : origB.apply(this, arguments);
-  }
-  const s = document.createElement("style");
-  s.textContent = "* { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; } [idomkey] { box-shadow: none !important; text-shadow: none !important; } #cinematic-container, [idomkey=\"cinematicContainer\"] { display: none !important; }";
-  document.documentElement.appendChild(s);
-})();
-
-// [Low-Memory Profile]
-(function() {
-  try {
-    Object.defineProperty(navigator, 'deviceMemory', { get: () => 1, configurable: true });
-    Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 2, configurable: true });
-  } catch (e) {}
-})();
-
-// 1080p native UI enabled: 4K viewport spoof removed
-
-
 /* Start TizenTubeScripts.js */
 
 (function () {
   "use strict";
-
-  const CONFIG_KEY = "ytaf-configuration";
-  const defaultConfig = {
-    enableAdBlock: true,
-    enableSponsorBlock: true,
-    sponsorBlockManualSkips: [],
-    enableSponsorBlockSponsor: true,
-    enableSponsorBlockIntro: true,
-    enableSponsorBlockOutro: true,
-    enableSponsorBlockInteraction: true,
-    enableSponsorBlockSelfPromo: true,
-    enableSponsorBlockMusicOfftopic: true,
-    enableShorts: true,
-  };
-
-  let localConfig;
-
-  try {
-    localConfig = JSON.parse(window.localStorage[CONFIG_KEY]);
-  } catch (err) {
-    //console.warn('Config read failed:', err);
-    localConfig = defaultConfig;
-  }
-
-  window.localConfig = window.localStorage[CONFIG_KEY]
-    ? JSON.parse(window.localStorage[CONFIG_KEY])
-    : defaultConfig;
-
-  window.configRead = function (key) {
-    if (window.localConfig[key] === undefined) {
-      window.localConfig[key] = defaultConfig[key];
-    }
-    return window.localConfig[key];
-  };
-
-  window.configWrite = function (key, value) {
-    window.localConfig[key] = value;
-    window.localStorage[CONFIG_KEY] = JSON.stringify(window.localConfig);
-  };
 
   const showToast = () => {};
 
@@ -117,17 +17,17 @@
   const origParse = JSON.parse;
   JSON.parse = function () {
     const r = origParse.apply(this, arguments);
-    if (r.adPlacements && configRead("enableAdBlock")) {
+    if (r.adPlacements) {
       r.adPlacements = [];
     }
 
     // Also set playerAds to false, just incase.
-    if (r.playerAds && configRead("enableAdBlock")) {
+    if (r.playerAds) {
       r.playerAds = false;
     }
 
     // Also set adSlots to an empty array, emptying only the adPlacements won't work.
-    if (r.adSlots && configRead("enableAdBlock")) {
+    if (r.adSlots) {
       r.adSlots = [];
     }
 
@@ -330,7 +230,7 @@
     }
 
     async init() {
-      if (!configRead("enableSponsorBlock")) return;
+      
 
       const videoHash = sha256(this.videoID).substring(0, 4);
       const categories = [
@@ -351,7 +251,7 @@
       }
 
       this.segments = result.segments;
-      this.manualSkippableCategories = configRead("sponsorBlockManualSkips");
+      this.manualSkippableCategories = [];
       this.skippableCategories = this.getSkippableCategories();
 
       this.scheduleSkipHandler = () => this.scheduleSkip();
@@ -361,28 +261,7 @@
       this.buildOverlay();
     }
 
-    getSkippableCategories() {
-      const skippableCategories = [];
-      if (configRead("enableSponsorBlockSponsor")) {
-        skippableCategories.push("sponsor");
-      }
-      if (configRead("enableSponsorBlockIntro")) {
-        skippableCategories.push("intro");
-      }
-      if (configRead("enableSponsorBlockOutro")) {
-        skippableCategories.push("outro");
-      }
-      if (configRead("enableSponsorBlockInteraction")) {
-        skippableCategories.push("interaction");
-      }
-      if (configRead("enableSponsorBlockSelfPromo")) {
-        skippableCategories.push("selfpromo");
-      }
-      if (configRead("enableSponsorBlockMusicOfftopic")) {
-        skippableCategories.push("music_offtopic");
-      }
-      return skippableCategories;
-    }
+    getSkippableCategories() { return ["sponsor","intro","outro","interaction","selfpromo","music_offtopic"]; }
 
     attachVideo() {
       clearTimeout(this.attachVideoTimeout);
