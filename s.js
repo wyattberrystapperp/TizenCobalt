@@ -400,3 +400,27 @@ var cnt=0,tmr=setInterval(function(){try{var o=yo();if(o){o.exec(new o.cmd("relo
 
 (function(){var re=/^(Podcasts|Sports|Gaming|Live|Movies.*|Library|Subscriptions?|Shorts)$/i;function sweep(){var g=document.querySelector("ytlr-guide-response");if(!g)return;var els=g.querySelectorAll("yt-focus-container, [idomkey]");for(var i=0;i<els.length;i++){var el=els[i],t=(el.textContent||"").trim();if(re.test(t)){var p=el.closest("ytlr-guide-entry-renderer, yt-focus-container, [idomkey]")||el;p.style.setProperty("display","none","important");p.setAttribute("tabindex","-1");}}}new MutationObserver(sweep).observe(document.documentElement,{childList:true,subtree:true});})();
 
+
+// [Auto Frame Rate (AFR) Engine]
+(function(){
+  function afr(){
+    var p=document.querySelector(".html5-video-player"), v=document.querySelector("video");
+    if(!p||!v) return setTimeout(afr,500);
+    p.addEventListener("onPlaybackStartExternal",function(){
+      try{
+        if(location.href.indexOf("watch")===-1) return;
+        var s=typeof p.getStatsForNerds==="function"?p.getStatsForNerds():null;
+        var m=s&&s.resolution?s.resolution.match(/@([\d.]+)/):null;
+        if(m&&m[1]&&window.h5vcc&&window.h5vcc.tizentube&&window.h5vcc.tizentube.SetFrameRate){
+          v.pause(); setTimeout(function(){v.play();},1000);
+          window.h5vcc.tizentube.SetFrameRate(parseFloat(m[1]));
+        }
+      }catch(e){}
+    });
+    window.addEventListener("hashchange",function(){
+      if(location.href.indexOf("watch")===-1&&window.h5vcc&&window.h5vcc.tizentube&&window.h5vcc.tizentube.SetFrameRate)
+        window.h5vcc.tizentube.SetFrameRate(0);
+    });
+  }
+  afr();
+})();
