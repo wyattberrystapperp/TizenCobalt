@@ -1,6 +1,6 @@
 // [Safe Telemetry Mute]
 (function(){
-  var isLog = function(u){ return typeof u === "string" && (u.includes("/log_event") || u.includes("/api/stats/qoe")); };
+  var isLog = function(u){ return typeof u === "string" && u.includes("/log_event"); };
   var origO = XMLHttpRequest.prototype.open;
   XMLHttpRequest.prototype.open = function(m, u){
     var res = origO.apply(this, arguments);
@@ -13,10 +13,10 @@
     return isLog(target) ? true : origB.apply(this, arguments);
   }; }
 })();
-// [Low-Memory Profile]
+// [AV1-Capable Hardware Profile]
 try {
-  Object.defineProperty(navigator, "deviceMemory", { get: () => 1, configurable: true });
-  Object.defineProperty(navigator, "hardwareConcurrency", { get: () => 2, configurable: true });
+  Object.defineProperty(navigator, "deviceMemory", { get: () => 4, configurable: true });
+  Object.defineProperty(navigator, "hardwareConcurrency", { get: () => 4, configurable: true });
 } catch(e) {}
 /* Start TizenTubeScripts.js */
 
@@ -452,13 +452,16 @@ var cnt=0,tmr=setInterval(function(){try{var o=yo();if(o){o.exec(new o.cmd("relo
         try {
           var v = document.querySelector("video");
           var now = Date.now();
-          if(v && !v.paused && v.currentTime > 45 &&
-             !this.updating && this.buffered.length > 0 &&
-             (now - this._lastTrim > 10000)){
-            var target = v.currentTime - 30;
-            if(this.buffered.start(0) < target){
-              this._lastTrim = now;
-              this.remove(0, target);
+          if(v && !v.paused && !this.updating && this.buffered.length > 0 && (now - this._lastTrim > 10000)){
+            var bStart = this.buffered.start(0);
+            var bEnd = this.buffered.end(this.buffered.length - 1);
+            var cur = v.currentTime;
+            if(cur >= bStart && cur <= bEnd && cur > 45){
+              var target = cur - 30;
+              if(bStart < target && target < cur){
+                this._lastTrim = now;
+                this.remove(bStart, target);
+              }
             }
           }
         } catch(e){}
