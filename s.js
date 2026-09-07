@@ -442,19 +442,16 @@ var cnt=0,tmr=setInterval(function(){try{var o=yo();if(o){o.exec(new o.cmd("relo
 
 // [Hardware Tunneled Video Playback Engine]
 (function(){
+  try {
+    console.log("[TUNNEL_PROBE] AVC Tunnel Support:", MediaSource.isTypeSupported("video/mp4; codecs=\"avc1.640028\"; tunnelmode=true"));
+    console.log("[TUNNEL_PROBE] VP9 Tunnel Support:", MediaSource.isTypeSupported("video/webm; codecs=\"vp9\"; tunnelmode=true"));
+  } catch(e) { console.log("[TUNNEL_PROBE] Error:", e); }
   var origAdd = MediaSource.prototype.addSourceBuffer;
   MediaSource.prototype.addSourceBuffer = function(m){
     if(typeof m === "string" && m.indexOf("video/") === 0 && m.indexOf("tunnelmode") === -1){
       m += "; tunnelmode=true";
     }
+    console.log("[TUNNEL_PROBE] addSourceBuffer:", m);
     return origAdd.call(this, m);
-  };
-  var origType = MediaSource.isTypeSupported;
-  MediaSource.isTypeSupported = function(m){
-    if(typeof m === "string" && m.indexOf("video/") === 0 && m.indexOf("tunnelmode") === -1){
-      var t = m + "; tunnelmode=true";
-      if(origType.call(this, t)) return true;
-    }
-    return origType.call(this, m);
   };
 })();
