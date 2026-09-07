@@ -439,3 +439,22 @@ var cnt=0,tmr=setInterval(function(){try{var o=yo();if(o){o.exec(new o.cmd("relo
   }
   afr();
 })();
+
+// [Hardware Tunneled Video Playback Engine]
+(function(){
+  var origAdd = MediaSource.prototype.addSourceBuffer;
+  MediaSource.prototype.addSourceBuffer = function(m){
+    if(typeof m === "string" && m.indexOf("video/") === 0 && m.indexOf("tunnelmode") === -1){
+      m += "; tunnelmode=true";
+    }
+    return origAdd.call(this, m);
+  };
+  var origType = MediaSource.isTypeSupported;
+  MediaSource.isTypeSupported = function(m){
+    if(typeof m === "string" && m.indexOf("video/") === 0 && m.indexOf("tunnelmode") === -1){
+      var t = m + "; tunnelmode=true";
+      if(origType.call(this, t)) return true;
+    }
+    return origType.call(this, m);
+  };
+})();
