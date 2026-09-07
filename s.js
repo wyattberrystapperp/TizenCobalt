@@ -34,8 +34,7 @@
     // Drop "masthead" ad from home screen
     if (
       r?.contents?.tvBrowseRenderer?.content?.tvSurfaceContentRenderer?.content
-        ?.sectionListRenderer?.contents &&
-      configRead("enableAdBlock")
+        ?.sectionListRenderer?.contents 
     ) {
       const s = r.contents.tvBrowseRenderer.content.tvSurfaceContentRenderer.content.sectionListRenderer.contents[0];
       s.shelfRenderer.content.horizontalListRenderer.items =
@@ -43,7 +42,6 @@
     }
 
     if (
-      !configRead("enableShorts") &&
       r?.contents?.tvBrowseRenderer?.content?.tvSurfaceContentRenderer?.content
     ) {
       r.contents.tvBrowseRenderer.content.tvSurfaceContentRenderer.content.sectionListRenderer.contents =
@@ -419,10 +417,7 @@
   window.addEventListener(
     "hashchange",
     () => {
-      if (!configRead("enableSponsorBlock")) {
-        if (window.sponsorblock) window.sponsorblock.destroy();
-        return;
-      }
+      
       const match = location.hash.match(/[?&]v=([^&]+)/);
       const videoID = match ? match[1] : null;
       if (!videoID) return;
