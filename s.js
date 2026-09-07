@@ -17,6 +17,7 @@
   const origParse = JSON.parse;
   JSON.parse = function () {
     const r = origParse.apply(this, arguments);
+    if (!r || typeof r !== "object") return r;
     if (r.adPlacements) {
       r.adPlacements = [];
     }
@@ -31,27 +32,11 @@
       r.adSlots = [];
     }
 
-    // Drop "masthead" ad from home screen
-    if (
-      r?.contents?.tvBrowseRenderer?.content?.tvSurfaceContentRenderer?.content
-        ?.sectionListRenderer?.contents 
-    ) {
-      const s = r.contents.tvBrowseRenderer.content.tvSurfaceContentRenderer.content.sectionListRenderer.contents[0];
-      s.shelfRenderer.content.horizontalListRenderer.items =
-      s.shelfRenderer.content.horizontalListRenderer.items.filter(i => !i?.adSlotRenderer)
-    }
-
-    if (
-      r?.contents?.tvBrowseRenderer?.content?.tvSurfaceContentRenderer?.content
-    ) {
-      r.contents.tvBrowseRenderer.content.tvSurfaceContentRenderer.content.sectionListRenderer.contents =
-        r.contents.tvBrowseRenderer.content.tvSurfaceContentRenderer.content.sectionListRenderer.contents.filter(
-          (shelve) =>
-            shelve.shelfRenderer?.tvhtml5ShelfRendererType !==
-            "TVHTML5_SHELF_RENDERER_TYPE_SHORTS"
-        );
-    }
-
+    const mh = r?.contents?.tvBrowseRenderer?.content?.tvSurfaceContentRenderer?.content?.sectionListRenderer?.contents?.[0];
+    const mhi = mh?.shelfRenderer?.content?.horizontalListRenderer?.items;
+    if (Array.isArray(mhi)) mh.shelfRenderer.content.horizontalListRenderer.items = mhi.filter(i => !i?.adSlotRenderer);
+    const sl = r?.contents?.tvBrowseRenderer?.content?.tvSurfaceContentRenderer?.content?.sectionListRenderer;
+    if (Array.isArray(sl?.contents)) sl.contents = sl.contents.filter(s => s?.shelfRenderer?.tvhtml5ShelfRendererType !== "TVHTML5_SHELF_RENDERER_TYPE_SHORTS");
     if (r?.items && Array.isArray(r.items)) {
       const bI = ["BROADCAST","TROPHY","GAMING","LIVE","CLAPPERBOARD","TAB_LIBRARY","SUBSCRIPTIONS","YOUTUBE_SHORTS"];
       const bB = ["FEtopics_podcasts","FEtopics_sports","FEtopics_gaming","FEtopics_live","FEtopics_movies","FEstorefront","FElibrary","FEsubscriptions","FEshorts"];
@@ -271,7 +256,7 @@
         return;
       }
 
-      this.video.addEventListener("play", this.scheduleSkipHandler);
+      this.video.addEventListener("timeupdate", this.scheduleSkipHandler);
       this.video.addEventListener("durationchange", this.durationChangeHandler);
     }
 
@@ -325,7 +310,7 @@
           this.sliderInterval = null;
           this.observer.observe(this.slider, { childList: true });
           this.slider.appendChild(this.segmentsoverlay);
-        } else if (sliderAttempts >= 10) {
+        } else if (sliderAttempts >= 120) {
           clearInterval(this.sliderInterval);
           this.sliderInterval = null;
         }
@@ -333,38 +318,14 @@
     }
 
     scheduleSkip() {
-      clearTimeout(this.nextSkipTimeout);
-      this.nextSkipTimeout = null;
-
-      if (!this.active || this.video.paused) return;
-
-      const current = this.video.currentTime;
-
-      const nextSegments = this.segments
-        .filter((seg) => seg.segment[0] >= current - 0.2)
-        .sort((a, b) => a.segment[0] - b.segment[0]);
-
-      if (!nextSegments.length) return;
-
-      const [segment] = nextSegments;
-      const [start, end] = segment.segment;
-
-      if (current >= end) return;
-
-      const delay = Math.max(0, (start - current) * 1000);
-
-      this.nextSkipTimeout = setTimeout(() => {
-        if (this.video.paused) return;
-        if (!this.skippableCategories.includes(segment.category)) return;
-
-        const skipName = barTypes[segment.category]?.name || segment.category;
-        if (!this.manualSkippableCategories.includes(segment.category)) {
-          showToast("SponsorBlock", `Skipping ${skipName}`);
-          this.video.currentTime = end;
-          this.scheduleSkip();
-        }
-      }, delay);
+    if (!this.active || !this.video || this.video.paused || !this.segments) return;
+    const cur = this.video.currentTime;
+    for (let s of this.segments) {
+      if (cur >= s.segment[0] && cur < s.segment[1]) {
+        if (this.skippableCategories.includes(s.category)) { this.video.currentTime = s.segment[1]; break; }
+      }
     }
+  }
 
     destroy() {
       this.active = false;
@@ -413,30 +374,18 @@
   // shows my lack of understanding of javascript. (or both)
 
   window.sponsorblock = null;
-
-  window.addEventListener(
-    "hashchange",
-    () => {
-      
-      const match = location.hash.match(/[?&]v=([^&]+)/);
-      const videoID = match ? match[1] : null;
-      if (!videoID) return;
-      const needsReload =
-        !window.sponsorblock || window.sponsorblock.videoID != videoID;
-
-      if (needsReload) {
-        if (window.sponsorblock) {
-          window.sponsorblock.destroy();
-          window.sponsorblock = null;
-        }
-
-        window.sponsorblock = new SponsorBlockHandler(videoID);
-        window.sponsorblock.init();
-      }
-    },
-    false
-  );
-
+  const _onNav = () => {
+    const match = location.hash.match(/[?&]v=([^&]+)/);
+    const id = match ? match[1] : null;
+    if (id && (!window.sponsorblock || window.sponsorblock.videoID != id)) {
+      if (window.sponsorblock) { window.sponsorblock.destroy(); window.sponsorblock = null; }
+      window.sponsorblock = new SponsorBlockHandler(id);
+      window.sponsorblock.init();
+    }
+  };
+  window.addEventListener("hashchange", _onNav, false);
+  window.addEventListener("popstate", _onNav, false);
+  document.addEventListener("loadstart", _onNav, true);
   /*global navigate*/
 
   // It just works, okay?
@@ -449,5 +398,5 @@ var hi=setInterval(function(){if(typeof window._yttv==="object"&&window._yttv){v
 (function(){function yo(){var e,t,d;if(!window._yttv)return null;for(var i in window._yttv){var m=window._yttv[i];if(m&&m.getInstance){var o=m.getInstance();if(m.toString().includes("ytlrActionRouter"))e=o;else if(o){for(var s of Object.getOwnPropertyNames(Object.getPrototypeOf(o)||{})){if(typeof o[s]==="function"&&o[s].toString().includes("ytlrActionRouter")){t=o[s];e=o;}}}}if(typeof m==="function"&&m.toString().includes("this.actionName"))d=m;}if(e&&!t){for(var c of Object.getOwnPropertyNames(Object.getPrototypeOf(e)||{})){if(typeof e[c]==="function"&&e[c].toString().includes("ytlrActionRouter"))t=e[c];}}return(e&&t&&d)?{exec:t.bind(e),cmd:d}:null;}
 var cnt=0,tmr=setInterval(function(){try{var o=yo();if(o){o.exec(new o.cmd("reloadGuideAction"));clearInterval(tmr);}}catch(x){}if(++cnt>30)clearInterval(tmr);},500);})();
 
-(function(){var re=/^(Podcasts|Sports|Gaming|Live|Movies.*|Library|Subscriptions?|Shorts)$/i;function sweep(){var g=document.querySelector("ytlr-guide-response");if(!g)return;var els=g.querySelectorAll("yt-focus-container, [idomkey]");for(var i=0;i<els.length;i++){var el=els[i],t=(el.textContent||"").trim();if(re.test(t)){var p=el.closest("ytlr-guide-entry-renderer, yt-focus-container, [idomkey]")||el;p.style.setProperty("display","none","important");try{p.remove();}catch(e){}}}}new MutationObserver(sweep).observe(document.documentElement,{childList:true,subtree:true});setInterval(sweep,1000);})();
+(function(){var re=/^(Podcasts|Sports|Gaming|Live|Movies.*|Library|Subscriptions?|Shorts)$/i;function sweep(){var g=document.querySelector("ytlr-guide-response");if(!g)return;var els=g.querySelectorAll("yt-focus-container, [idomkey]");for(var i=0;i<els.length;i++){var el=els[i],t=(el.textContent||"").trim();if(re.test(t)){var p=el.closest("ytlr-guide-entry-renderer, yt-focus-container, [idomkey]")||el;p.style.setProperty("display","none","important");p.setAttribute("tabindex","-1");}}}new MutationObserver(sweep).observe(document.documentElement,{childList:true,subtree:true});})();
 
