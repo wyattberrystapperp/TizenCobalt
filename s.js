@@ -407,6 +407,21 @@ var cnt=0,tmr=setInterval(function(){try{var o=yo();if(o){o.exec(new o.cmd("relo
     var p=document.querySelector(".html5-video-player"), v=document.querySelector("video");
     if(!p||!v) return setTimeout(afr,500);
     p.addEventListener("onPlaybackStartExternal",function(){
+      var attempts = 0;
+      function check(){
+        if(location.href.indexOf("watch")===-1) return;
+        var s=typeof p.getStatsForNerds==="function"?p.getStatsForNerds():null;
+        var m=s&&s.resolution?s.resolution.match(/@([\d.]+)/):null;
+        if(m&&m[1]){
+          var fps=parseFloat(m[1]);
+          console.log("[AFR] Target FPS detected:", fps);
+          if(fps>0&&window.h5vcc?.tizentube?.SetFrameRate){
+            v.pause(); setTimeout(function(){v.play();},800);
+            window.h5vcc.tizentube.SetFrameRate(fps);
+          }
+        } else if(++attempts < 6){ setTimeout(check, 250); }
+      }
+      check();
       try{
         if(location.href.indexOf("watch")===-1) return;
         var s=typeof p.getStatsForNerds==="function"?p.getStatsForNerds():null;
