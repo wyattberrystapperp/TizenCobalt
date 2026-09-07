@@ -1,3 +1,8 @@
+// [Low-Memory Profile]
+try {
+  Object.defineProperty(navigator, "deviceMemory", { get: () => 1, configurable: true });
+  Object.defineProperty(navigator, "hardwareConcurrency", { get: () => 2, configurable: true });
+} catch(e) {}
 /* Start TizenTubeScripts.js */
 
 (function () {
@@ -399,3 +404,19 @@ var hi=setInterval(function(){if(typeof window._yttv==="object"&&window._yttv){v
 var cnt=0,tmr=setInterval(function(){try{var o=yo();if(o){o.exec(new o.cmd("reloadGuideAction"));clearInterval(tmr);}}catch(x){}if(++cnt>30)clearInterval(tmr);},500);})();
 
 (function(){var re=/^(Podcasts|Sports|Gaming|Live|Movies.*|Library|Subscriptions?|Shorts)$/i;function sweep(){var g=document.querySelector("ytlr-guide-response");if(!g)return;var els=g.querySelectorAll("yt-focus-container, [idomkey]");for(var i=0;i<els.length;i++){var el=els[i],t=(el.textContent||"").trim();if(re.test(t)){var p=el.closest("ytlr-guide-entry-renderer, yt-focus-container, [idomkey]")||el;p.style.setProperty("display","none","important");p.setAttribute("tabindex","-1");}}}new MutationObserver(sweep).observe(document.documentElement,{childList:true,subtree:true});})();
+
+// [Active MSE Buffer Trimmer]
+(function(){
+  var origAppend = SourceBuffer.prototype.appendBuffer;
+  SourceBuffer.prototype.appendBuffer = function(buf){
+    try {
+      var v = document.querySelector("video");
+      if(v && v.currentTime > 45 && !this.updating && this.buffered.length > 0){
+        if(this.buffered.start(0) < v.currentTime - 30){
+          this.remove(0, v.currentTime - 30);
+        }
+      }
+    } catch(e){}
+    return origAppend.call(this, buf);
+  };
+})();
