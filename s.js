@@ -1,6 +1,6 @@
 // [Safe Telemetry Mute]
 (function(){
-  var isLog = function(u){ return typeof u === "string" && u.includes("/log_event"); };
+  var isLog = function(u){ return typeof u === "string" && (u.includes("/log_event") || u.includes("/api/stats/qoe")); };
   var origO = XMLHttpRequest.prototype.open;
   XMLHttpRequest.prototype.open = function(m, u){
     var res = origO.apply(this, arguments);
@@ -55,8 +55,9 @@ try {
         if (v.navigationEndpoint?.reelWatchEndpoint) return false;
         const url = v.navigationEndpoint?.commandMetadata?.webCommandMetadata?.url || "";
         if (url.includes("/shorts/")) return false;
-        if (Array.isArray(v.thumbnail?.thumbnails) && v.thumbnail.thumbnails.length > 2) {
-          v.thumbnail.thumbnails = v.thumbnail.thumbnails.filter(x => !x.width || x.width <= 480);
+        if (Array.isArray(v.thumbnail?.thumbnails) && v.thumbnail.thumbnails.length > 1) {
+          const best = v.thumbnail.thumbnails.filter(x => !x.width || x.width <= 480).pop() || v.thumbnail.thumbnails[0];
+          v.thumbnail.thumbnails = [best];
         }
       }
       return true;
@@ -515,7 +516,7 @@ var cnt=0,tmr=setInterval(function(){try{var o=yo();if(o){o.exec(new o.cmd("relo
   s.textContent = `
     ytlr-moving-thumbnail-renderer, [idomkey*="movingThumbnail"], #cinematic-container, [idomkey*="cinematic"], .ytlr-cinematic-container-renderer, ytlr-storyboard-renderer, ytlr-thumbnail-preview-renderer, [idomkey*="storyboard"], [idomkey*="previewThumbnail"], .ytlr-scrubber-preview, ytlr-endscreen-renderer, [idomkey*="endscreen"], ytlr-reel-shelf-renderer, ytlr-reel-item-renderer, [idomkey*="reel"], [idomkey*="Shorts"], [idomkey*="shorts"], .ytlr-reel-shelf-renderer { display: none !important; }
     ytlr-overlay-renderer, [idomkey*="overlay"], .ytlr-dialog-renderer, ytlr-guide-renderer { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
-    ytlr-compact-metadata-renderer, ytlr-guide-entry-renderer, .ytlr-tile-renderer { box-shadow: none !important; text-shadow: none !important; contain: layout paint !important; }
+    ytlr-compact-metadata-renderer, ytlr-guide-entry-renderer, .ytlr-tile-renderer { box-shadow: none !important; text-shadow: none !important; contain: strict !important; will-change: transform !important; }
     yt-focus-container, ytlr-guide-entry-renderer, ytlr-compact-metadata-renderer, .ytlr-tile-renderer { -webkit-transition-duration: 0.001s !important; transition-duration: 0.001s !important; }
   `;
   document.documentElement.appendChild(s);
