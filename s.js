@@ -15,8 +15,8 @@
 })();
 // [AV1-Capable Hardware Profile]
 try {
-  Object.defineProperty(navigator, "deviceMemory", { get: () => 4, configurable: true });
-  Object.defineProperty(navigator, "hardwareConcurrency", { get: () => 4, configurable: true });
+  Object.defineProperty(navigator, "deviceMemory", { get: () => 2, configurable: true });
+  Object.defineProperty(navigator, "hardwareConcurrency", { get: () => 2, configurable: true });
 } catch(e) {}
 /* Start TizenTubeScripts.js */
 
@@ -34,73 +34,64 @@ try {
    *
    * Seems like for now dropping just the adPlacements is enough for YouTube TV
    */
-  const origParse = JSON.parse;
+    const origParse = JSON.parse;
   JSON.parse = function () {
     const r = origParse.apply(this, arguments);
     if (!r || typeof r !== "object") return r;
-    if (r.adPlacements) {
-      r.adPlacements = [];
-    }
-
-    // Also set playerAds to false, just incase.
-    if (r.playerAds) {
-      r.playerAds = false;
-    }
-
-    // Also set adSlots to an empty array, emptying only the adPlacements won't work.
-    if (r.adSlots) {
-      r.adSlots = [];
-    }
+    if (r.adPlacements) r.adPlacements = [];
+    if (r.playerAds) r.playerAds = false;
+    if (r.adSlots) r.adSlots = [];
     if (r.storyboards) delete r.storyboards;
     if (r.playerStoryboardSpecRenderer) delete r.playerStoryboardSpecRenderer;
     if (r.storyboard) delete r.storyboard;
     if (r.endscreen) delete r.endscreen;
     if (r.paidContentOverlayRenderer) delete r.paidContentOverlayRenderer;
-
-    const mh = r?.contents?.tvBrowseRenderer?.content?.tvSurfaceContentRenderer?.content?.sectionListRenderer?.contents?.[0];
-    const mhi = mh?.shelfRenderer?.content?.horizontalListRenderer?.items;
-    if (Array.isArray(mhi)) {
-      mh.shelfRenderer.content.horizontalListRenderer.items = mhi.filter(i => {
-        const v = i?.compactVideoRenderer || i?.tvVideoRenderer || i?.gridVideoRenderer;
-        if (v) {
-          if (v.movingThumbnailRenderer) delete v.movingThumbnailRenderer;
-          if (Array.isArray(v.thumbnail?.thumbnails) && v.thumbnail.thumbnails.length > 2) {
-            v.thumbnail.thumbnails = v.thumbnail.thumbnails.filter(x => !x.width || x.width <= 480);
-          }
+    const cleanItem = (i) => {
+      if (!i) return false;
+      if (i.reelItemRenderer || i.adSlotRenderer) return false;
+      const v = i.compactVideoRenderer || i.tvVideoRenderer || i.gridVideoRenderer || i.tileRenderer;
+      if (v) {
+        if (v.movingThumbnailRenderer) delete v.movingThumbnailRenderer;
+        if (v.navigationEndpoint?.reelWatchEndpoint) return false;
+        const url = v.navigationEndpoint?.commandMetadata?.webCommandMetadata?.url || "";
+        if (url.includes("/shorts/")) return false;
+        if (Array.isArray(v.thumbnail?.thumbnails) && v.thumbnail.thumbnails.length > 2) {
+          v.thumbnail.thumbnails = v.thumbnail.thumbnails.filter(x => !x.width || x.width <= 480);
         }
-        return !i?.adSlotRenderer;
-      });
-    }
+      }
+      return true;
+    };
+    const cleanShelf = (s) => {
+      if (!s || s.reelShelfRenderer) return false;
+      const sr = s.shelfRenderer;
+      if (!sr) return true;
+      if (sr.tvhtml5ShelfRendererType === "TVHTML5_SHELF_RENDERER_TYPE_SHORTS") return false;
+      const bId = (sr.endpoint?.browseEndpoint?.browseId || "").toLowerCase();
+      const title = (sr.title?.runs?.[0]?.text || "").toLowerCase();
+      if (bId.includes("shorts") || title.includes("shorts")) return false;
+      const hl = sr.content?.horizontalListRenderer;
+      if (Array.isArray(hl?.items)) hl.items = hl.items.filter(cleanItem);
+      return true;
+    };
+    const cleanSectionList = (sl) => {
+      if (Array.isArray(sl?.contents)) {
+        sl.contents = sl.contents.filter(cleanShelf);
+        sl.contents.forEach(s => {
+          const hl = s?.shelfRenderer?.content?.horizontalListRenderer;
+          if (Array.isArray(hl?.items)) hl.items = hl.items.filter(cleanItem);
+        });
+      }
+    };
     const sl = r?.contents?.tvBrowseRenderer?.content?.tvSurfaceContentRenderer?.content?.sectionListRenderer;
-    if (Array.isArray(sl?.contents)) {
-      sl.contents = sl.contents.filter(s => {
-        if (s?.reelShelfRenderer) return false;
-        const sr = s?.shelfRenderer;
-        if (!sr) return true;
-        if (sr.tvhtml5ShelfRendererType === "TVHTML5_SHELF_RENDERER_TYPE_SHORTS") return false;
-        const bId = sr.endpoint?.browseEndpoint?.browseId || "";
-        const title = sr.title?.runs?.[0]?.text || "";
-        return !bId.toLowerCase().includes("shorts") && !title.toLowerCase().includes("shorts");
-      });
-      sl.contents.forEach(s => {
-        const hList = s?.shelfRenderer?.content?.horizontalListRenderer;
-        if (Array.isArray(hList?.items)) {
-          hList.items = hList.items.filter(i => {
-            if (i?.reelItemRenderer) return false;
-            const v = i?.compactVideoRenderer || i?.tvVideoRenderer || i?.gridVideoRenderer;
-            if (v) {
-              if (v.navigationEndpoint?.reelWatchEndpoint) return false;
-              const url = v.navigationEndpoint?.commandMetadata?.webCommandMetadata?.url || "";
-              if (url.includes("/shorts/")) return false;
-              if (Array.isArray(v.thumbnail?.thumbnails) && v.thumbnail.thumbnails.length > 2) {
-                v.thumbnail.thumbnails = v.thumbnail.thumbnails.filter(x => !x.width || x.width <= 480);
-              }
-            }
-            return true;
-          });
-        }
-      });
-    }
+    if (sl) cleanSectionList(sl);
+    const contSl = r?.continuationContents?.sectionListContinuation;
+    if (contSl) cleanSectionList(contSl);
+    const contHl = r?.continuationContents?.horizontalListContinuation;
+    if (Array.isArray(contHl?.items)) contHl.items = contHl.items.filter(cleanItem);
+    const watchSl = r?.contents?.tvWatchNextRenderer?.content?.tvSurfaceContentRenderer?.content?.sectionListRenderer;
+    if (watchSl) cleanSectionList(watchSl);
+    const searchSl = r?.contents?.tvSearchRenderer?.content?.tvSurfaceContentRenderer?.content?.sectionListRenderer;
+    if (searchSl) cleanSectionList(searchSl);
     if (r?.items && Array.isArray(r.items)) {
       const bI = ["BROADCAST","TROPHY","GAMING","LIVE","CLAPPERBOARD","TAB_LIBRARY","SUBSCRIPTIONS","YOUTUBE_SHORTS"];
       const bB = ["FEtopics_podcasts","FEtopics_sports","FEtopics_gaming","FEtopics_live","FEtopics_movies","FEstorefront","FElibrary","FEsubscriptions","FEshorts"];
@@ -464,17 +455,27 @@ var hi=setInterval(function(){if(typeof window._yttv==="object"&&window._yttv){v
 (function(){function yo(){var e,t,d;if(!window._yttv)return null;for(var i in window._yttv){var m=window._yttv[i];if(m&&m.getInstance){var o=m.getInstance();if(m.toString().includes("ytlrActionRouter"))e=o;else if(o){for(var s of Object.getOwnPropertyNames(Object.getPrototypeOf(o)||{})){if(typeof o[s]==="function"&&o[s].toString().includes("ytlrActionRouter")){t=o[s];e=o;}}}}if(typeof m==="function"&&m.toString().includes("this.actionName"))d=m;}if(e&&!t){for(var c of Object.getOwnPropertyNames(Object.getPrototypeOf(e)||{})){if(typeof e[c]==="function"&&e[c].toString().includes("ytlrActionRouter"))t=e[c];}}return(e&&t&&d)?{exec:t.bind(e),cmd:d}:null;}
 var cnt=0,tmr=setInterval(function(){try{var o=yo();if(o){o.exec(new o.cmd("reloadGuideAction"));clearInterval(tmr);}}catch(x){}if(++cnt>30)clearInterval(tmr);},500);})();
 
-(function(){var re=/^(Podcasts|Sports|Gaming|Live|Movies.*|Library|Subscriptions?|Shorts)$/i;function sweep(){var g=document.querySelector("ytlr-guide-response");if(!g)return;var els=g.querySelectorAll("yt-focus-container, [idomkey]");for(var i=0;i<els.length;i++){var el=els[i],t=(el.textContent||"").trim();if(re.test(t)){var p=el.closest("ytlr-guide-entry-renderer, yt-focus-container, [idomkey]")||el;p.style.setProperty("display","none","important");p.setAttribute("tabindex","-1");}}}var rootObs = new MutationObserver(function(){
-    var g = document.querySelector(
-      "ytlr-guide-response, ytlr-guide-renderer");
-    if(g){
-      rootObs.disconnect();
-      sweep(g);
-      new MutationObserver(function(){ sweep(g); })
-        .observe(g, {childList:true, subtree:true});
+(function(){
+  var re = /^(Podcasts|Sports|Gaming|Live|Movies.*|Library|Subscriptions?|Shorts)$/i;
+  function sweep(g){
+    if(!g) g = document.querySelector("ytlr-guide-response, ytlr-guide-renderer");
+    if(!g) return;
+    var els = g.querySelectorAll("yt-focus-container, [idomkey]");
+    for(var i=0; i<els.length; i++){
+      var el = els[i], t = (el.textContent||"").trim();
+      if(re.test(t)){
+        var p = el.closest("ytlr-guide-entry-renderer, yt-focus-container, [idomkey]") || el;
+        p.style.setProperty("display","none","important");
+        p.setAttribute("tabindex","-1");
+      }
     }
+  }
+  var rootObs = new MutationObserver(function(){
+    var g = document.querySelector("ytlr-guide-response, ytlr-guide-renderer");
+    if(g){ rootObs.disconnect(); sweep(g); setTimeout(function(){ sweep(g); }, 1200); }
   });
-  rootObs.observe(document.documentElement, {childList:true, subtree:true});})();
+  rootObs.observe(document.documentElement, {childList:true, subtree:true});
+})();
 
 // [Active MSE Buffer Trimmer]
 (function(){
