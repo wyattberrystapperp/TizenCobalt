@@ -254,9 +254,11 @@
         return;
       }
 
-      this.segments = result.segments;
-      this.manualSkippableCategories = [];
       this.skippableCategories = this.getSkippableCategories();
+      this.segments = (result.segments || []).filter(function(s){
+        return ["sponsor","intro","outro","interaction","selfpromo","music_offtopic"].indexOf(s.category) !== -1;
+      });
+      this.manualSkippableCategories = [];
 
       this.scheduleSkipHandler = () => this.scheduleSkip();
       this.durationChangeHandler = () => this.buildOverlay();
@@ -378,11 +380,8 @@
       }
 
       if (this.video) {
-        this.video.removeEventListener("play", this.scheduleSkipHandler);
-        this.video.removeEventListener(
-          "durationchange",
-          this.durationChangeHandler
-        );
+        this.video.removeEventListener("timeupdate", this.scheduleSkipHandler);
+        this.video.removeEventListener("durationchange", this.durationChangeHandler);
       }
     }
   }
@@ -419,4 +418,27 @@ var hi=setInterval(function(){if(typeof window._yttv==="object"&&window._yttv){v
 (function(){function yo(){var e,t,d;if(!window._yttv)return null;for(var i in window._yttv){var m=window._yttv[i];if(m&&m.getInstance){var o=m.getInstance();if(m.toString().includes("ytlrActionRouter"))e=o;else if(o){for(var s of Object.getOwnPropertyNames(Object.getPrototypeOf(o)||{})){if(typeof o[s]==="function"&&o[s].toString().includes("ytlrActionRouter")){t=o[s];e=o;}}}}if(typeof m==="function"&&m.toString().includes("this.actionName"))d=m;}if(e&&!t){for(var c of Object.getOwnPropertyNames(Object.getPrototypeOf(e)||{})){if(typeof e[c]==="function"&&e[c].toString().includes("ytlrActionRouter"))t=e[c];}}return(e&&t&&d)?{exec:t.bind(e),cmd:d}:null;}
 var cnt=0,tmr=setInterval(function(){try{var o=yo();if(o){o.exec(new o.cmd("reloadGuideAction"));clearInterval(tmr);}}catch(x){}if(++cnt>30)clearInterval(tmr);},500);})();
 
-(function(){var re=/^(Podcasts|Sports|Gaming|Live|Movies.*|Library|Subscriptions?|Shorts)$/i;function sweep(){var g=document.querySelector("ytlr-guide-response");if(!g)return;var els=g.querySelectorAll("yt-focus-container, [idomkey]");for(var i=0;i<els.length;i++){var el=els[i],t=(el.textContent||"").trim();if(re.test(t)){var p=el.closest("ytlr-guide-entry-renderer, yt-focus-container, [idomkey]")||el;p.style.setProperty("display","none","important");p.setAttribute("tabindex","-1");}}}new MutationObserver(sweep).observe(document.documentElement,{childList:true,subtree:true});})();
+(function(){
+  var re = /^(Podcasts|Sports|Gaming|Live|Movies.*|Library|Subscriptions?|Shorts)$/i;
+  var tmr = null;
+  function sweep(){
+    tmr = null;
+    var g = document.querySelector("ytlr-guide-response");
+    if (!g) return;
+    var els = g.querySelectorAll("yt-focus-container, [idomkey]");
+    for (var i = 0; i < els.length; i++){
+      var el = els[i], t = (el.textContent || "").trim();
+      if (re.test(t)){
+        var p = el.closest("ytlr-guide-entry-renderer, yt-focus-container, [idomkey]") || el;
+        p.style.setProperty("display", "none", "important");
+        p.setAttribute("tabindex", "-1");
+      }
+    }
+  }
+  var obs = new MutationObserver(function(){
+    if (!tmr) tmr = setTimeout(sweep, 300);
+  });
+  obs.observe(document.documentElement, { childList: true, subtree: true });
+  setTimeout(function(){ obs.disconnect(); }, 15000);
+  window.addEventListener("hashchange", function(){ if (!tmr) tmr = setTimeout(sweep, 300); });
+})();
