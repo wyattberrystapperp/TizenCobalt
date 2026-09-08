@@ -1,23 +1,3 @@
-// [Safe Telemetry Mute]
-(function(){
-  var isLog = function(u){ return typeof u === "string" && (u.includes("/log_event") || u.includes("/api/stats/qoe")); };
-  var origO = XMLHttpRequest.prototype.open;
-  XMLHttpRequest.prototype.open = function(m, u){
-    var res = origO.apply(this, arguments);
-    if(isLog(u)){ this.send = function(){}; }
-    return res;
-  };
-  if(window.fetch){ var origF = window.fetch; window.fetch = function(inp){ var u = typeof inp === "string" ? inp : (inp && (inp.url || inp.href)); if(isLog(u)) return Promise.resolve(new Response("", { status: 204 })); return origF.apply(this, arguments); }; }
-  if(navigator.sendBeacon){ var origB = navigator.sendBeacon.bind(navigator); navigator.sendBeacon = function(u){
-    var target = typeof u === "string" ? u : (u && (u.href || u.url));
-    return isLog(target) ? true : origB.apply(this, arguments);
-  }; }
-})();
-// [AV1-Capable Hardware Profile]
-try {
-  Object.defineProperty(navigator, "deviceMemory", { get: () => 2, configurable: true });
-  Object.defineProperty(navigator, "hardwareConcurrency", { get: () => 2, configurable: true });
-} catch(e) {}
 /* Start TizenTubeScripts.js */
 
 (function () {
@@ -34,83 +14,44 @@ try {
    *
    * Seems like for now dropping just the adPlacements is enough for YouTube TV
    */
-    const origParse = JSON.parse;
+  const origParse = JSON.parse;
   JSON.parse = function () {
     const r = origParse.apply(this, arguments);
     if (!r || typeof r !== "object") return r;
-    if (r.adPlacements) r.adPlacements = [];
-    if (r.playerAds) r.playerAds = false;
-    if (r.adSlots) r.adSlots = [];
-    if (r.storyboards) delete r.storyboards;
-    if (r.playerStoryboardSpecRenderer) delete r.playerStoryboardSpecRenderer;
-    if (r.storyboard) delete r.storyboard;
-    if (r.endscreen) delete r.endscreen;
-    if (r.paidContentOverlayRenderer) delete r.paidContentOverlayRenderer;
-    const cleanItem = (i) => {
-      if (!i) return false;
-      if (i.reelItemRenderer || i.adSlotRenderer) return false;
-      const v = i.compactVideoRenderer || i.tvVideoRenderer || i.gridVideoRenderer || i.tileRenderer;
-      if (v) {
-        if (v.movingThumbnailRenderer) delete v.movingThumbnailRenderer;
-        if (v.navigationEndpoint && v.navigationEndpoint.reelWatchEndpoint) return false;
-        const url = v.navigationEndpoint && v.navigationEndpoint.commandMetadata && v.navigationEndpoint.commandMetadata.webCommandMetadata && v.navigationEndpoint.commandMetadata.webCommandMetadata.url || "";
-        if (url.includes("/shorts/")) return false;
-        if (Array.isArray(v.thumbnail && v.thumbnail.thumbnails) && v.thumbnail.thumbnails.length > 1) {
-          const best = v.thumbnail.thumbnails.filter(x => !x.width || x.width <= 480).pop() || v.thumbnail.thumbnails[0];
-          v.thumbnail.thumbnails = [best];
-        }
-      }
-      return true;
-    };
-    const cleanShelf = (s) => {
-      if (!s || s.reelShelfRenderer) return false;
-      const sr = s.shelfRenderer;
-      if (!sr) return true;
-      if (sr.tvhtml5ShelfRendererType === "TVHTML5_SHELF_RENDERER_TYPE_SHORTS") return false;
-      const bId = (sr.endpoint && sr.endpoint.browseEndpoint && sr.endpoint.browseEndpoint.browseId || "").toLowerCase();
-      const title = (sr.title && sr.title.runs && sr.title.runs[0] && sr.title.runs[0].text || "").toLowerCase();
-      if (bId.includes("shorts") || title.includes("shorts")) return false;
-      const hl = sr.content && sr.content.horizontalListRenderer;
-      if (Array.isArray(hl && hl.items)) hl.items = hl.items.filter(cleanItem);
-      return true;
-    };
-    const cleanSectionList = (sl) => {
-      if (Array.isArray(sl && sl.contents)) {
-        sl.contents = sl.contents.filter(cleanShelf);
-        sl.contents.forEach(s => {
-          const hl = s && s.shelfRenderer && s.shelfRenderer.content && s.shelfRenderer.content.horizontalListRenderer;
-          if (Array.isArray(hl && hl.items)) hl.items = hl.items.filter(cleanItem);
-        });
-      }
-    };
-    const sl = r && r.contents && r.contents.tvBrowseRenderer && r.contents.tvBrowseRenderer.content && r.contents.tvBrowseRenderer.content.tvSurfaceContentRenderer && r.contents.tvBrowseRenderer.content.tvSurfaceContentRenderer.content && r.contents.tvBrowseRenderer.content.tvSurfaceContentRenderer.content.sectionListRenderer;
-    if (sl) cleanSectionList(sl);
-    const contSl = r && r.continuationContents && r.continuationContents.sectionListContinuation;
-    if (contSl) cleanSectionList(contSl);
-    const contHl = r && r.continuationContents && r.continuationContents.horizontalListContinuation;
-    if (Array.isArray(contHl && contHl.items)) contHl.items = contHl.items.filter(cleanItem);
-    const watchSl = r && r.contents && r.contents.tvWatchNextRenderer && r.contents.tvWatchNextRenderer.content && r.contents.tvWatchNextRenderer.content.tvSurfaceContentRenderer && r.contents.tvWatchNextRenderer.content.tvSurfaceContentRenderer.content && r.contents.tvWatchNextRenderer.content.tvSurfaceContentRenderer.content.sectionListRenderer;
-    // watchSl intact
-    const searchSl = r && r.contents && r.contents.tvSearchRenderer && r.contents.tvSearchRenderer.content && r.contents.tvSearchRenderer.content.tvSurfaceContentRenderer && r.contents.tvSearchRenderer.content.tvSurfaceContentRenderer.content && r.contents.tvSearchRenderer.content.tvSurfaceContentRenderer.content.sectionListRenderer;
-    if (searchSl) cleanSectionList(searchSl);
+    if (r.adPlacements) {
+      r.adPlacements = [];
+    }
+
+    // Also set playerAds to false, just incase.
+    if (r.playerAds) {
+      r.playerAds = false;
+    }
+
+    // Also set adSlots to an empty array, emptying only the adPlacements won't work.
+    if (r.adSlots) {
+      r.adSlots = [];
+    }
+
+    const sl_t = r && r.contents && r.contents.tvBrowseRenderer && r.contents.tvBrowseRenderer.content && r.contents.tvBrowseRenderer.content.tvSurfaceContentRenderer && r.contents.tvBrowseRenderer.content.tvSurfaceContentRenderer.content && r.contents.tvBrowseRenderer.content.tvSurfaceContentRenderer.content.sectionListRenderer;
+    const mh = sl_t && sl_t.contents && sl_t.contents[0];
+    const mhi = mh && mh.shelfRenderer && mh.shelfRenderer.content && mh.shelfRenderer.content.horizontalListRenderer && mh.shelfRenderer.content.horizontalListRenderer.items;
+    if (Array.isArray(mhi)) mh.shelfRenderer.content.horizontalListRenderer.items = mhi.filter(i => (!i || !i.adSlotRenderer));
+    const sl = sl_t;
+    if (Array.isArray(sl && sl.contents)) sl.contents = sl.contents.filter(s => (!s || !s.shelfRenderer || s.shelfRenderer.tvhtml5ShelfRendererType !== "TVHTML5_SHELF_RENDERER_TYPE_SHORTS"));
     if (r && r.items && Array.isArray(r.items)) {
       const bI = ["BROADCAST","TROPHY","GAMING","LIVE","CLAPPERBOARD","TAB_LIBRARY","SUBSCRIPTIONS","YOUTUBE_SHORTS"];
       const bB = ["FEtopics_podcasts","FEtopics_sports","FEtopics_gaming","FEtopics_live","FEtopics_movies","FEstorefront","FElibrary","FEsubscriptions","FEshorts"];
-      r.items = r.items.filter(item => {
-        if (!item || item.guideSubscriptionsSectionRenderer) return false;
-        const a = item.guideSectionRenderer;
-        if (a && Array.isArray(a.items)) {
-          a.items = a.items.filter(entry => {
-            const s = entry && entry.guideEntryRenderer;
-            if (!s) return true;
-            const ic = s && s.icon && s.icon.iconType || "";
-            const id = s && s.navigationEndpoint && s.navigationEndpoint.browseEndpoint && s.navigationEndpoint.browseEndpoint.browseId || "";
-            return !(bI.includes(ic) || bB.includes(id) || ic.includes("SHORTS") || id.includes("shorts") || s.thumbnail);
-          });
-          return a.items.length > 0;
+      for (let n = 0; n < r.items.length; n++) {
+        if ((r.items[n] && r.items[n].guideSubscriptionsSectionRenderer)) { r.items.splice(n, 1); n--; continue; }
+        const a = r.items[n] && r.items[n].guideSectionRenderer;
+        if (a && a.items) {
+          for (let o = 0; o < a.items.length; o++) {
+            const s = (a.items[o] && a.items[o].guideEntryRenderer), ic = (s && s.icon && s.icon.iconType) || "", id = (s && s.navigationEndpoint && s.navigationEndpoint.browseEndpoint && s.navigationEndpoint.browseEndpoint.browseId) || "";
+            if (s && (bI.includes(ic) || bB.includes(id) || ic.includes("SHORTS") || id.includes("shorts") || s.thumbnail)) { a.items.splice(o, 1); o--; }
+          }
+          if (a.items.length === 0) { r.items.splice(n, 1); n--; }
         }
-        return true;
-      });
+      }
     }
     return r;
   };
@@ -307,7 +248,6 @@ try {
     getSkippableCategories() { return ["sponsor","intro","outro","interaction","selfpromo","music_offtopic"]; }
 
     attachVideo() {
-      if (!this.active) return;
       clearTimeout(this.attachVideoTimeout);
       this.attachVideoTimeout = null;
 
@@ -350,10 +290,16 @@ try {
         this.segmentsoverlay.appendChild(elm);
       });
 
-      this.observer = new MutationObserver(() => {
-        if (this.slider && this.segmentsoverlay && !this.slider.contains(this.segmentsoverlay)) {
-          this.slider.appendChild(this.segmentsoverlay);
-        }
+      this.observer = new MutationObserver((mutations) => {
+        mutations.forEach((m) => {
+          if (m.removedNodes) {
+            for (const node of m.removedNodes) {
+              if (node === this.segmentsoverlay) {
+                this.slider.appendChild(this.segmentsoverlay);
+              }
+            }
+          }
+        });
       });
 
       let sliderAttempts = 0;
@@ -375,25 +321,16 @@ try {
     scheduleSkip() {
     if (!this.active || !this.video || this.video.paused || !this.segments) return;
     const cur = this.video.currentTime;
-    const sec = Math.floor(cur);
-    if (sec === this._lastSec) return;
-    this._lastSec = sec;
     for (let s of this.segments) {
       if (cur >= s.segment[0] && cur < s.segment[1]) {
-        if (this.skippableCategories.includes(s.category)) { this.video.currentTime = s.segment[1] + 0.05; break; }
+        if (this.skippableCategories.includes(s.category)) { this.video.currentTime = s.segment[1]; break; }
       }
     }
   }
 
     destroy() {
       this.active = false;
-      if (this.video) {
-        this.video.removeEventListener("timeupdate",
-          this.scheduleSkipHandler);
-        this.video.removeEventListener("durationchange",
-          this.durationChangeHandler);
-      }
-      this.segments = null; this.video = null; this.slider = null;
+      this.segments = null;
 
       if (this.nextSkipTimeout) {
         clearTimeout(this.nextSkipTimeout);
@@ -420,7 +357,14 @@ try {
         this.segmentsoverlay = null;
       }
 
+      if (this.video) {
+        this.video.removeEventListener("play", this.scheduleSkipHandler);
+        this.video.removeEventListener(
+          "durationchange",
+          this.durationChangeHandler
+        );
       }
+    }
   }
 
   // When this global variable was declared using let and two consecutive hashchange
@@ -432,8 +376,7 @@ try {
 
   window.sponsorblock = null;
   const _onNav = () => {
-    const targetUrl = location.hash + " " + location.search;
-    const match = targetUrl.match(/[?&]v=([^&#\s]+)/);
+    const match = location.hash.match(/[?&]v=([^&]+)/);
     const id = match ? match[1] : null;
     if (id && (!window.sponsorblock || window.sponsorblock.videoID != id)) {
       if (window.sponsorblock) { window.sponsorblock.destroy(); window.sponsorblock = null; }
@@ -450,74 +393,10 @@ try {
   })();
 
 (function(){function b(){try{var r=localStorage.getItem("yt.leanback.default::recurring_actions"),t=r?JSON.parse(r):{data:{data:{}}};t.data=t.data||{};t.data.data=t.data.data||{};var f=Date.now()+604800000;["startup-screen-account-selector-with-guest","whos_watching_fullscreen_zero_accounts","startup-screen-signed-out-welcome-back"].forEach(function(k){t.data.data[k]=t.data.data[k]||{};t.data.data[k].lastFired=f;});localStorage.setItem("yt.leanback.default::recurring_actions",JSON.stringify(t));}catch(e){}}
-b();var bi=setInterval(b,2000);setTimeout(function(){clearInterval(bi);},20000);
+b();var bi=setInterval(b,2000);setTimeout(function(){clearInterval(bi);},10000);
 var hi=setInterval(function(){if(typeof window._yttv==="object"&&window._yttv){var ok=!1;for(var k in window._yttv){var m=window._yttv[k];if(m&&m.instance&&typeof m.instance.resolveCommand==="function"&&!m.instance._exitH){(function(inst){var o=inst.resolveCommand;inst._exitH=!0;inst.resolveCommand=function(c,n){var u;if(c&&c.requestAccountSelectorCommand&&"ACCOUNT_EVENT_TRIGGER_ON_EXIT"===(null===(u=c.requestAccountSelectorCommand)||void 0===u||null===(u=u.identityActionContext)||void 0===u?void 0:u.eventTrigger))return o.call(this,{signalAction:{signal:"EXIT_APP"}}),!1;return o.call(this,c,n);};})(m.instance);ok=!0;}}if(ok)clearInterval(hi);}},250);})();
 
 (function(){function yo(){var e,t,d;if(!window._yttv)return null;for(var i in window._yttv){var m=window._yttv[i];if(m&&m.getInstance){var o=m.getInstance();if(m.toString().includes("ytlrActionRouter"))e=o;else if(o){for(var s of Object.getOwnPropertyNames(Object.getPrototypeOf(o)||{})){if(typeof o[s]==="function"&&o[s].toString().includes("ytlrActionRouter")){t=o[s];e=o;}}}}if(typeof m==="function"&&m.toString().includes("this.actionName"))d=m;}if(e&&!t){for(var c of Object.getOwnPropertyNames(Object.getPrototypeOf(e)||{})){if(typeof e[c]==="function"&&e[c].toString().includes("ytlrActionRouter"))t=e[c];}}return(e&&t&&d)?{exec:t.bind(e),cmd:d}:null;}
 var cnt=0,tmr=setInterval(function(){try{var o=yo();if(o){o.exec(new o.cmd("reloadGuideAction"));clearInterval(tmr);}}catch(x){}if(++cnt>30)clearInterval(tmr);},500);})();
 
-(function(){
-  var re = /^(Podcasts|Sports|Gaming|Live|Movies.*|Library|Subscriptions?|Shorts)$/i;
-  function sweep(g){
-    if(!g) g = document.querySelector("ytlr-guide-response, ytlr-guide-renderer");
-    if(!g) return;
-    var els = g.querySelectorAll("yt-focus-container, [idomkey]");
-    for(var i=0; i<els.length; i++){
-      var el = els[i], t = (el.textContent||"").trim();
-      if(re.test(t)){
-        var p = el.closest("ytlr-guide-entry-renderer, yt-focus-container, [idomkey]") || el;
-        p.style.setProperty("display","none","important");
-        p.setAttribute("tabindex","-1");
-      }
-    }
-  }
-  var rootObs = new MutationObserver(function(){
-    var g = document.querySelector("ytlr-guide-response, ytlr-guide-renderer");
-    if(g){ rootObs.disconnect(); sweep(g); setTimeout(function(){ sweep(g); }, 1200); }
-  });
-  rootObs.observe(document.documentElement, {childList:true, subtree:true});
-})();
-
-// [Active MSE Buffer Trimmer]
-(function(){
-  var origAppend = SourceBuffer.prototype.appendBuffer;
-  SourceBuffer.prototype.appendBuffer = function(buf){
-    if(!this._trimHook){
-      this._trimHook = true;
-      this._lastTrim = 0;
-      this._v = null;
-      this.addEventListener("updateend", function(){
-        try {
-          if(!this._v || !this._v.isConnected) this._v = document.querySelector("video");
-          var v = this._v;
-          var now = Date.now();
-          if(v && !v.paused && !this.updating && this.buffered.length > 0 && (now - this._lastTrim > 10000)){
-            var bStart = this.buffered.start(0);
-            var bEnd = this.buffered.end(this.buffered.length - 1);
-            var cur = v.currentTime;
-            if(cur >= bStart && cur <= bEnd && cur > 45){
-              var target = cur - 30;
-              if(bStart < target && target < cur){
-                this._lastTrim = now;
-                // this.remove disabled
-              }
-            }
-          }
-        } catch(e){}
-      });
-    }
-    return origAppend.call(this, buf);
-  };
-})();
-
-// [GPU Texture & Shader Shield]
-(function(){
-  var s = document.createElement("style");
-  s.textContent = `
-    ytlr-moving-thumbnail-renderer, [idomkey*="movingThumbnail"], #cinematic-container, [idomkey*="cinematic"], .ytlr-cinematic-container-renderer, ytlr-storyboard-renderer, ytlr-thumbnail-preview-renderer, [idomkey*="storyboard"], [idomkey*="previewThumbnail"], .ytlr-scrubber-preview, ytlr-endscreen-renderer, [idomkey*="endscreen"], ytlr-reel-shelf-renderer, ytlr-reel-item-renderer, [idomkey*="reel"], [idomkey*="Shorts"], [idomkey*="shorts"], .ytlr-reel-shelf-renderer { display: none !important; }
-    ytlr-overlay-renderer, [idomkey*="overlay"], .ytlr-dialog-renderer, ytlr-guide-renderer { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
-    ytlr-compact-metadata-renderer, ytlr-guide-entry-renderer, .ytlr-tile-renderer-unused { box-shadow: none !important; text-shadow: none !important; contain: strict !important; will-change: transform !important; }
-    yt-focus-container, ytlr-guide-entry-renderer, ytlr-compact-metadata-renderer, .ytlr-tile-renderer-unused { -webkit-transition-duration: 0.001s !important; transition-duration: 0.001s !important; }
-  `;
-  document.documentElement.appendChild(s);
-})();
+(function(){var re=/^(Podcasts|Sports|Gaming|Live|Movies.*|Library|Subscriptions?|Shorts)$/i;function sweep(){var g=document.querySelector("ytlr-guide-response");if(!g)return;var els=g.querySelectorAll("yt-focus-container, [idomkey]");for(var i=0;i<els.length;i++){var el=els[i],t=(el.textContent||"").trim();if(re.test(t)){var p=el.closest("ytlr-guide-entry-renderer, yt-focus-container, [idomkey]")||el;p.style.setProperty("display","none","important");p.setAttribute("tabindex","-1");}}}new MutationObserver(sweep).observe(document.documentElement,{childList:true,subtree:true});})();
