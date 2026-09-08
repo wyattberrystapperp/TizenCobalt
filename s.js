@@ -3,6 +3,18 @@
 (function () {
   "use strict";
 
+  // Production Log & MIME short-circuit to eliminate logd jank
+  try {
+    console.log = console.info = console.warn = console.debug = function () {};
+    if (window.MediaSource && MediaSource.isTypeSupported) {
+      var origSupported = MediaSource.isTypeSupported.bind(MediaSource);
+      MediaSource.isTypeSupported = function (type) {
+        if (type && (type.indexOf("yt-ump") !== -1 || type.indexOf("text/") !== -1)) return false;
+        return origSupported(type);
+      };
+    }
+  } catch (e) {}
+
   const showToast = () => {};
 
   /**
@@ -279,7 +291,15 @@
         return;
       }
 
-      this.video.addEventListener("timeupdate", this.scheduleSkipHandler);
+      this.lastSkipCheck = 0;
+      this._throttledSkip = () => {
+        const now = Date.now();
+        if (now - this.lastSkipCheck >= 1000) {
+          this.lastSkipCheck = now;
+          this.scheduleSkip();
+        }
+      };
+      this.video.addEventListener("timeupdate", this._throttledSkip);
       this.video.addEventListener("durationchange", this.durationChangeHandler);
     }
 
@@ -324,20 +344,11 @@
         });
       });
 
-      let sliderAttempts = 0;
-      this.sliderInterval = setInterval(() => {
-        this.slider = document.querySelector('[idomkey="slider"]');
-        sliderAttempts++;
-        if (this.slider) {
-          clearInterval(this.sliderInterval);
-          this.sliderInterval = null;
-          this.observer.observe(this.slider, { childList: true });
-          this.slider.appendChild(this.segmentsoverlay);
-        } else if (sliderAttempts >= 120) {
-          clearInterval(this.sliderInterval);
-          this.sliderInterval = null;
-        }
-      }, 500);
+      this.slider = document.querySelector('[idomkey="slider"]');
+      if (this.slider) {
+        this.observer.observe(this.slider, { childList: true });
+        this.slider.appendChild(this.segmentsoverlay);
+      }
     }
 
     scheduleSkip() {
@@ -380,7 +391,7 @@
       }
 
       if (this.video) {
-        this.video.removeEventListener("timeupdate", this.scheduleSkipHandler);
+        this.video.removeEventListener("timeupdate", this._throttledSkip || this.scheduleSkipHandler);
         this.video.removeEventListener("durationchange", this.durationChangeHandler);
       }
     }
