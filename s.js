@@ -26,29 +26,61 @@
    *
    * Seems like for now dropping just the adPlacements is enough for YouTube TV
    */
+  var isMovieShelf = function(sr) {
+    if (!sr) return false;
+    var h = sr.shelfHeaderRenderer || sr;
+    var t = h.title || sr.title;
+    var title = "";
+    if (t) {
+      if (typeof t.simpleText === "string") title = t.simpleText;
+      else if (Array.isArray(t.runs) && t.runs[0] && t.runs[0].text) title = t.runs[0].text;
+    }
+    if (/primetime|movies|filmy|filme/i.test(title)) return true;
+    var ic = (h.icon && h.icon.iconType) || (sr.icon && sr.icon.iconType) || "";
+    if (ic === "CLAPPERBOARD" || ic.indexOf("MOVIE") !== -1) return true;
+    var itms = sr.content && sr.content.horizontalListRenderer && sr.content.horizontalListRenderer.items;
+    if (Array.isArray(itms) && itms.length > 0) {
+      for (var j = 0; j < Math.min(itms.length, 3); j++) {
+        var it = itms[j];
+        if (!it) continue;
+        if (it.compactMovieRenderer || it.movieRenderer) return true;
+        if (it.tileRenderer) {
+          var raw = JSON.stringify(it.tileRenderer);
+          if (raw.indexOf("YPC") !== -1 || raw.indexOf("OFFER_TYPE_BUY") !== -1 || /"text":"(Buy|Kup)"/i.test(raw)) return true;
+        }
+      }
+    }
+    return false;
+  };
   var pruneShelves = function(arr) {
-      if (!Array.isArray(arr)) return;
-      for (var i = 0; i < arr.length; i++) {
-        var s = arr[i];
-        if (s && s.shelfRenderer) {
-          if (s.shelfRenderer.tvhtml5ShelfRendererType === "TVHTML5_SHELF_RENDERER_TYPE_SHORTS") {
-            arr.splice(i, 1); i--;
-          } else {
-            var itms = s.shelfRenderer.content && s.shelfRenderer.content.horizontalListRenderer && s.shelfRenderer.content.horizontalListRenderer.items;
-            if (Array.isArray(itms)) {
-              s.shelfRenderer.content.horizontalListRenderer.items = itms.filter(function(x){ return !x || !x.adSlotRenderer; });
-            }
+    if (!Array.isArray(arr)) return;
+    for (var i = 0; i < arr.length; i++) {
+      var s = arr[i];
+      if (!s) continue;
+      if (s.shelfRenderer) {
+        if (s.shelfRenderer.tvhtml5ShelfRendererType === "TVHTML5_SHELF_RENDERER_TYPE_SHORTS" || isMovieShelf(s.shelfRenderer)) {
+          arr.splice(i, 1); i--; continue;
+        } else {
+          var itms = s.shelfRenderer.content && s.shelfRenderer.content.horizontalListRenderer && s.shelfRenderer.content.horizontalListRenderer.items;
+          if (Array.isArray(itms)) {
+            s.shelfRenderer.content.horizontalListRenderer.items = itms.filter(function(x){ return !x || !x.adSlotRenderer; });
           }
         }
       }
-    };
-    var scan = function(o) {
-      if (!o || typeof o !== "object") return;
-      if (Array.isArray(o.contents)) pruneShelves(o.contents);
-      if (o.sectionListRenderer && Array.isArray(o.sectionListRenderer.contents)) pruneShelves(o.sectionListRenderer.contents);
-      if (o.sectionListContinuation && Array.isArray(o.sectionListContinuation.contents)) pruneShelves(o.sectionListContinuation.contents);
-      if (o.tvBrowseRenderer && o.tvBrowseRenderer.content) scan(o.tvBrowseRenderer.content);
-      if (o.tvSurfaceContentRenderer && o.tvSurfaceContentRenderer.content) scan(o.tvSurfaceContentRenderer.content);
+      if (s.itemSectionRenderer && Array.isArray(s.itemSectionRenderer.contents)) {
+        pruneShelves(s.itemSectionRenderer.contents);
+        if (s.itemSectionRenderer.contents.length === 0) { arr.splice(i, 1); i--; }
+      }
+    }
+  };
+  var scan = function(o) {
+    if (!o || typeof o !== "object") return;
+    if (Array.isArray(o)) { pruneShelves(o); for (var k = 0; k < o.length; k++) scan(o[k]); return; }
+    if (Array.isArray(o.contents)) pruneShelves(o.contents);
+    if (o.sectionListRenderer && Array.isArray(o.sectionListRenderer.contents)) pruneShelves(o.sectionListRenderer.contents);
+    if (o.sectionListContinuation && Array.isArray(o.sectionListContinuation.contents)) pruneShelves(o.sectionListContinuation.contents);
+    if (o.tvBrowseRenderer && o.tvBrowseRenderer.content) scan(o.tvBrowseRenderer.content);
+    if (o.tvSurfaceContentRenderer && o.tvSurfaceContentRenderer.content) scan(o.tvSurfaceContentRenderer.content);
     };
       const origParse = JSON.parse;
   JSON.parse = function () {
