@@ -26,25 +26,7 @@
    *
    * Seems like for now dropping just the adPlacements is enough for YouTube TV
    */
-  const origParse = JSON.parse;
-  JSON.parse = function () {
-    const r = origParse.apply(this, arguments);
-    if (!r || typeof r !== "object") return r;
-    if (r.adPlacements) {
-      r.adPlacements = [];
-    }
-
-    // Also set playerAds to false, just incase.
-    if (r.playerAds) {
-      r.playerAds = false;
-    }
-
-    // Also set adSlots to an empty array, emptying only the adPlacements won't work.
-    if (r.adSlots) {
-      r.adSlots = [];
-    }
-
-    var pruneShelves = function(arr) {
+  var pruneShelves = function(arr) {
       if (!Array.isArray(arr)) return;
       for (var i = 0; i < arr.length; i++) {
         var s = arr[i];
@@ -68,6 +50,24 @@
       if (o.tvBrowseRenderer && o.tvBrowseRenderer.content) scan(o.tvBrowseRenderer.content);
       if (o.tvSurfaceContentRenderer && o.tvSurfaceContentRenderer.content) scan(o.tvSurfaceContentRenderer.content);
     };
+      const origParse = JSON.parse;
+  JSON.parse = function () {
+    const r = origParse.apply(this, arguments);
+    if (!r || typeof r !== "object") return r;
+    if (r.adPlacements) {
+      r.adPlacements = [];
+    }
+
+    // Also set playerAds to false, just incase.
+    if (r.playerAds) {
+      r.playerAds = false;
+    }
+
+    // Also set adSlots to an empty array, emptying only the adPlacements won't work.
+    if (r.adSlots) {
+      r.adSlots = [];
+    }
+
     if (r && r.contents) scan(r.contents);
     if (r && r.continuationContents) scan(r.continuationContents);
     if (r && r.items && Array.isArray(r.items)) {
@@ -259,10 +259,10 @@
       ];
 
       const sbRes = await fetch(`${sponsorblockAPI}/skipSegments/${videoHash}?categories=${encodeURIComponent(JSON.stringify(categories))}`).catch(() => null);
-      if (!sbRes || !sbRes.ok) return;
+      if (!this.active || !sbRes || !sbRes.ok) return;
       const result = await sbRes.json().catch(() => null);
 
-      if (!result || !result.segments || !result.segments.length) {
+      if (!this.active || !result || !result.segments || !result.segments.length) {
         return;
       }
 
