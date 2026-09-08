@@ -32,12 +32,32 @@
       r.adSlots = [];
     }
 
-    const sl_t = r && r.contents && r.contents.tvBrowseRenderer && r.contents.tvBrowseRenderer.content && r.contents.tvBrowseRenderer.content.tvSurfaceContentRenderer && r.contents.tvBrowseRenderer.content.tvSurfaceContentRenderer.content && r.contents.tvBrowseRenderer.content.tvSurfaceContentRenderer.content.sectionListRenderer;
-    const mh = sl_t && sl_t.contents && sl_t.contents[0];
-    const mhi = mh && mh.shelfRenderer && mh.shelfRenderer.content && mh.shelfRenderer.content.horizontalListRenderer && mh.shelfRenderer.content.horizontalListRenderer.items;
-    if (Array.isArray(mhi)) mh.shelfRenderer.content.horizontalListRenderer.items = mhi.filter(i => (!i || !i.adSlotRenderer));
-    const sl = sl_t;
-    if (Array.isArray(sl && sl.contents)) sl.contents = sl.contents.filter(s => (!s || !s.shelfRenderer || s.shelfRenderer.tvhtml5ShelfRendererType !== "TVHTML5_SHELF_RENDERER_TYPE_SHORTS"));
+    var pruneShelves = function(arr) {
+      if (!Array.isArray(arr)) return;
+      for (var i = 0; i < arr.length; i++) {
+        var s = arr[i];
+        if (s && s.shelfRenderer) {
+          if (s.shelfRenderer.tvhtml5ShelfRendererType === "TVHTML5_SHELF_RENDERER_TYPE_SHORTS") {
+            arr.splice(i, 1); i--;
+          } else {
+            var itms = s.shelfRenderer.content && s.shelfRenderer.content.horizontalListRenderer && s.shelfRenderer.content.horizontalListRenderer.items;
+            if (Array.isArray(itms)) {
+              s.shelfRenderer.content.horizontalListRenderer.items = itms.filter(function(x){ return !x || !x.adSlotRenderer; });
+            }
+          }
+        }
+      }
+    };
+    var scan = function(o) {
+      if (!o || typeof o !== "object") return;
+      if (Array.isArray(o.contents)) pruneShelves(o.contents);
+      if (o.sectionListRenderer && Array.isArray(o.sectionListRenderer.contents)) pruneShelves(o.sectionListRenderer.contents);
+      if (o.sectionListContinuation && Array.isArray(o.sectionListContinuation.contents)) pruneShelves(o.sectionListContinuation.contents);
+      if (o.tvBrowseRenderer && o.tvBrowseRenderer.content) scan(o.tvBrowseRenderer.content);
+      if (o.tvSurfaceContentRenderer && o.tvSurfaceContentRenderer.content) scan(o.tvSurfaceContentRenderer.content);
+    };
+    if (r && r.contents) scan(r.contents);
+    if (r && r.continuationContents) scan(r.continuationContents);
     if (r && r.items && Array.isArray(r.items)) {
       const bI = ["BROADCAST","TROPHY","GAMING","LIVE","CLAPPERBOARD","TAB_LIBRARY","SUBSCRIPTIONS","YOUTUBE_SHORTS"];
       const bB = ["FEtopics_podcasts","FEtopics_sports","FEtopics_gaming","FEtopics_live","FEtopics_movies","FEstorefront","FElibrary","FEsubscriptions","FEshorts"];
