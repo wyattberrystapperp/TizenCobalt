@@ -90,7 +90,7 @@ try {
     const contHl = r && r.continuationContents && r.continuationContents.horizontalListContinuation;
     if (Array.isArray(contHl && contHl.items)) contHl.items = contHl.items.filter(cleanItem);
     const watchSl = r && r.contents && r.contents.tvWatchNextRenderer && r.contents.tvWatchNextRenderer.content && r.contents.tvWatchNextRenderer.content.tvSurfaceContentRenderer && r.contents.tvWatchNextRenderer.content.tvSurfaceContentRenderer.content && r.contents.tvWatchNextRenderer.content.tvSurfaceContentRenderer.content.sectionListRenderer;
-    if (watchSl) cleanSectionList(watchSl);
+    // watchSl intact
     const searchSl = r && r.contents && r.contents.tvSearchRenderer && r.contents.tvSearchRenderer.content && r.contents.tvSearchRenderer.content.tvSurfaceContentRenderer && r.contents.tvSearchRenderer.content.tvSurfaceContentRenderer.content && r.contents.tvSearchRenderer.content.tvSurfaceContentRenderer.content.sectionListRenderer;
     if (searchSl) cleanSectionList(searchSl);
     if (r && r.items && Array.isArray(r.items)) {
@@ -499,7 +499,7 @@ var cnt=0,tmr=setInterval(function(){try{var o=yo();if(o){o.exec(new o.cmd("relo
               var target = cur - 30;
               if(bStart < target && target < cur){
                 this._lastTrim = now;
-                this.remove(bStart, target);
+                // this.remove disabled
               }
             }
           }
@@ -516,8 +516,8 @@ var cnt=0,tmr=setInterval(function(){try{var o=yo();if(o){o.exec(new o.cmd("relo
   s.textContent = `
     ytlr-moving-thumbnail-renderer, [idomkey*="movingThumbnail"], #cinematic-container, [idomkey*="cinematic"], .ytlr-cinematic-container-renderer, ytlr-storyboard-renderer, ytlr-thumbnail-preview-renderer, [idomkey*="storyboard"], [idomkey*="previewThumbnail"], .ytlr-scrubber-preview, ytlr-endscreen-renderer, [idomkey*="endscreen"], ytlr-reel-shelf-renderer, ytlr-reel-item-renderer, [idomkey*="reel"], [idomkey*="Shorts"], [idomkey*="shorts"], .ytlr-reel-shelf-renderer { display: none !important; }
     ytlr-overlay-renderer, [idomkey*="overlay"], .ytlr-dialog-renderer, ytlr-guide-renderer { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
-    ytlr-compact-metadata-renderer, ytlr-guide-entry-renderer, .ytlr-tile-renderer { box-shadow: none !important; text-shadow: none !important; contain: strict !important; will-change: transform !important; }
-    yt-focus-container, ytlr-guide-entry-renderer, ytlr-compact-metadata-renderer, .ytlr-tile-renderer { -webkit-transition-duration: 0.001s !important; transition-duration: 0.001s !important; }
+    ytlr-compact-metadata-renderer, ytlr-guide-entry-renderer, .ytlr-tile-renderer-unused { box-shadow: none !important; text-shadow: none !important; contain: strict !important; will-change: transform !important; }
+    yt-focus-container, ytlr-guide-entry-renderer, ytlr-compact-metadata-renderer, .ytlr-tile-renderer-unused { -webkit-transition-duration: 0.001s !important; transition-duration: 0.001s !important; }
   `;
   document.documentElement.appendChild(s);
 })();
