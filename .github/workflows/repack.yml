@@ -17,7 +17,6 @@ jobs:
         run: |
           wget -q https://github.com/reisxd/TizenTubeCobalt/releases/download/v2.0.2/cobalt-arm.apk
           unzip -q -o cobalt-arm.apk "lib/*"
-          python3 inspect_so.py
           python3 patch_so.py
           zip -u cobalt-arm.apk lib/armeabi-v7a/libchrobalt.so
 
