@@ -108,6 +108,7 @@
       r.adSlots = [];
     }
 
+    if (r.streamingData) return r;
     if (r && r.contents) scan(r.contents);
     if (r && r.continuationContents) scan(r.continuationContents);
     if (r && r.items && Array.isArray(r.items)) {
@@ -456,7 +457,6 @@
   };
   window.addEventListener("hashchange", _onNav, false);
   window.addEventListener("popstate", _onNav, false);
-  document.addEventListener("loadstart", _onNav, true);
   /*global navigate*/
 
   // It just works, okay?
