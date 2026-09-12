@@ -16,6 +16,12 @@
   } catch (e) {}
 
   const showToast = () => {};
+  try {
+    var st = document.createElement("style");
+    st.textContent = "ytlr-tv-masthead-renderer, ytlr-masthead-renderer, [idomkey='masthead'], .ytlr-tv-masthead-renderer { display: none !important; height: 0 !important; visibility: hidden !important; pointer-events: none !important; }";
+    (document.head || document.documentElement).appendChild(st);
+  } catch(e) {}
+
 
   /**
    * This is a minimal reimplementation of the following uBlock Origin rule:
@@ -468,6 +474,8 @@ var cnt=0,tmr=setInterval(function(){try{var o=yo();if(o){o.exec(new o.cmd("relo
   var tmr = null;
   function sweep(){
     tmr = null;
+    var mhs = document.querySelectorAll("ytlr-tv-masthead-renderer, ytlr-masthead-renderer, [idomkey='masthead']");
+    for (var j = 0; j < mhs.length; j++) mhs[j].remove();
     var g = document.querySelector("ytlr-guide-response");
     if (!g) return;
     var els = g.querySelectorAll("yt-focus-container, [idomkey]");
