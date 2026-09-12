@@ -57,7 +57,8 @@
     for (var i = 0; i < arr.length; i++) {
       var s = arr[i];
       if (!s) continue;
-      if (s.shelfRenderer) {
+      if (s.tvMastheadRenderer || s.adSlotRenderer || s.brandVideoSingletonRenderer) { arr.splice(i, 1); i--; continue; }
+    if (s.shelfRenderer) {
         if (s.shelfRenderer.tvhtml5ShelfRendererType === "TVHTML5_SHELF_RENDERER_TYPE_SHORTS" || isMovieShelf(s.shelfRenderer)) {
           arr.splice(i, 1); i--; continue;
         } else {
@@ -79,13 +80,14 @@
     if (Array.isArray(o.contents)) pruneShelves(o.contents);
     if (o.sectionListRenderer && Array.isArray(o.sectionListRenderer.contents)) pruneShelves(o.sectionListRenderer.contents);
     if (o.sectionListContinuation && Array.isArray(o.sectionListContinuation.contents)) pruneShelves(o.sectionListContinuation.contents);
-    if (o.tvBrowseRenderer && o.tvBrowseRenderer.content) scan(o.tvBrowseRenderer.content);
+    if (o.tvBrowseRenderer) { delete o.tvBrowseRenderer.masthead; if (o.tvBrowseRenderer.content) scan(o.tvBrowseRenderer.content); }
     if (o.tvSurfaceContentRenderer && o.tvSurfaceContentRenderer.content) scan(o.tvSurfaceContentRenderer.content);
     };
       const origParse = JSON.parse;
   JSON.parse = function () {
     const r = origParse.apply(this, arguments);
     if (!r || typeof r !== "object") return r;
+    if (r.masthead) delete r.masthead;
     if (r.adPlacements) {
       r.adPlacements = [];
     }
