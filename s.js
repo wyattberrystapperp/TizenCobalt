@@ -51,7 +51,7 @@
         if (!it) continue;
         if (it.compactMovieRenderer || it.movieRenderer) return true;
         if (it.tileRenderer) {
-          var tr = it.tileRenderer, m = tr.metadata || tr.badges; if (tr.offerType === "OFFER_TYPE_BUY" || (m && /YPC|OFFER_TYPE_BUY|Buy|Kup/i.test(JSON.stringify(m)))) return true;
+          var tr = it.tileRenderer, m = tr.metadata || tr.badges; if (tr.offerType === "OFFER_TYPE_BUY") return true; if (m) { var b = m.label || (Array.isArray(m) && m[0] && m[0].metadataBadgeRenderer && m[0].metadataBadgeRenderer.label); if (b && /YPC|OFFER_TYPE_BUY|Buy|Kup/i.test(b)) return true; }
         }
       }
     }
@@ -81,7 +81,7 @@
   };
   var scan = function(o) {
     if (!o || typeof o !== "object") return;
-    if (Array.isArray(o)) { pruneShelves(o); for (var k = 0; k < o.length; k++) scan(o[k]); return; }
+    if (Array.isArray(o)) { pruneShelves(o); for (var k = 0; k < o.length; k++) { var itm = o[k]; if (itm && typeof itm === "object" && (itm.contents || itm.shelfRenderer || itm.sectionListRenderer)) scan(itm); } return; }
     if (Array.isArray(o.contents)) pruneShelves(o.contents);
     if (o.sectionListRenderer && Array.isArray(o.sectionListRenderer.contents)) pruneShelves(o.sectionListRenderer.contents);
     if (o.sectionListContinuation && Array.isArray(o.sectionListContinuation.contents)) pruneShelves(o.sectionListContinuation.contents);
