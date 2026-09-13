@@ -1,0 +1,17 @@
+Enabling Hardware Tunneling in TizenCobalt
+
+Tunneling routes decoded 4K video directly from the hardware VPU to the display via hardware clock sync (AmMediaSync), cutting app CPU to ~5.8%.
+
+1. Native Binary Patches (patch_so.py)
+Cobalt 27 gates tunneling behind its Starboard Experiment Registry. We patched three 4-byte values from 0 to 1 in libchrobalt.so:
+- ForceTunnelMode (0x492f888): Enables Starboard tunnel mode experiment (PR #7099).
+- ReleaseVideoFramesAfterAudioStarts (0x492f890): Prevents frame drops before audio sync locks.
+- EnableAv1StartupOptimization (0x492f8b0): Optimizes 4K AV1 decoder startup.
+
+2. Web Runtime MIME Hook (s.js)
+Cobalt requires the MIME parameter tunnelmode=true. Stock YouTube TV web client never sends this, so we hooked MediaSource in s.js:
+- MediaSource.isTypeSupported: Queries Starboard with '; tunnelmode=true'.
+- MediaSource.prototype.addSourceBuffer: Appends '; tunnelmode=true' to video buffers.
+
+3. Execution Chain
+Web Player requests tunnelmode=true -> Starboard creates tunnel pipeline -> AudioTrack binds tunnel_mode_audio_session_id -> Amlogic engages AmMediaSync: mOmxTunnelMode:1 -> MediaDecoder is created: tunnel_mode_enabled=true.
