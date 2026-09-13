@@ -9,6 +9,7 @@ Optimized mod of [TizenTubeCobalt](https://github.com/reisxd/TizenTubeCobalt) by
 - **Stable RAM:** Rock-solid footprint anchored between **200 MB – 400 MB** with zero memory leaks.
 - **Jank Elimination:** Removed synchronous `JSON.stringify` on shelves for fluid 60 FPS UI.
 - **Zero Telemetry:** Binary-level null routing of Google crashpad, analytics, and tracking.
+- this app is optimised and fully tested on mibox s gen 3. it may or may not work on other devices. 
 
 ### Credits & License
 Based on Cobalt (Google) and TizenTubeCobalt (`@reisxd`). Licensed under BSD-3-Clause.
