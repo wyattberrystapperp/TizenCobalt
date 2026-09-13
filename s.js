@@ -6,13 +6,17 @@
   // Production Log & MIME short-circuit to eliminate logd jank
   try {
     console.log = console.info = console.warn = console.debug = function () {};
-    if (window.MediaSource && MediaSource.isTypeSupported) {
-      var origSupported = MediaSource.isTypeSupported.bind(MediaSource);
-      MediaSource.isTypeSupported = function (type) {
-        if (type && (type.indexOf("yt-ump") !== -1 || type.indexOf("text/") !== -1)) return false;
-        return origSupported(type);
-      };
-    }
+    if (window.MediaSource) {
+  var _t = function(s){ return (typeof s==="string" && s.indexOf("video/")!==-1 && s.indexOf("tunnelmode")===-1) ? s+"; tunnelmode=true" : s; };
+  if (MediaSource.isTypeSupported) {
+    var _s = MediaSource.isTypeSupported.bind(MediaSource);
+    MediaSource.isTypeSupported = function(t){ if (t && (t.indexOf("yt-ump")!==-1 || t.indexOf("text/")!==-1)) return false; return _s(_t(t)) || _s(t); };
+  }
+  if (MediaSource.prototype && MediaSource.prototype.addSourceBuffer) {
+    var _a = MediaSource.prototype.addSourceBuffer;
+    MediaSource.prototype.addSourceBuffer = function(t){ var tun = _t(t); return _a.call(this, (MediaSource.isTypeSupported(tun) ? tun : t)); };
+  }
+}
   } catch (e) {}
 
   const showToast = () => {};
