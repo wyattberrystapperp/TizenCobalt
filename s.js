@@ -344,56 +344,10 @@
       this.video.addEventListener("durationchange", this.durationChangeHandler);
     }
 
-    buildOverlay() {
-      if (this.segmentsoverlay) {
-        return;
-      }
-
-      if (!this.video || !this.video.duration) {
-        return;
-      }
-
-      const videoDuration = this.video.duration;
-
-      this.segmentsoverlay = document.createElement("div");
-      this.segments.forEach((segment) => {
-        const [start, end] = segment.segment;
-        const barType = barTypes[segment.category] || {
-          color: "blue",
-          opacity: 0.7,
-        };
-        const transform = `translateX(${
-          (start / videoDuration) * 100.0
-        }%) scaleX(${(end - start) / videoDuration})`;
-        const elm = document.createElement("div");
-        elm.classList.add("ytLrProgressBarPlayed");
-        elm.style["background"] = barType.color;
-        elm.style["opacity"] = barType.opacity;
-        elm.style["-webkit-transform"] = transform;
-        this.segmentsoverlay.appendChild(elm);
-      });
-
-      this.observer = new MutationObserver((mutations) => {
-        mutations.forEach((m) => {
-          if (m.removedNodes) {
-            for (const node of m.removedNodes) {
-              if (node === this.segmentsoverlay) {
-                this.slider.appendChild(this.segmentsoverlay);
-              }
-            }
-          }
-        });
-      });
-
-      this.slider = document.querySelector('[idomkey="slider"]');
-      if (this.slider) {
-        this.observer.observe(this.slider, { childList: true });
-        this.slider.appendChild(this.segmentsoverlay);
-      }
-    }
+    buildOverlay() { if (!this.video || !this.video.duration || !this.segments) return; if (this.segmentsoverlay && this.segmentsoverlay.parentNode) return; this.slider = this.slider || document.querySelector('[idomkey="slider"]'); if (!this.slider) return; if (!this.segmentsoverlay) { const vd = this.video.duration; this.segmentsoverlay = document.createElement("div"); this.segments.forEach((s) => { const [st, en] = s.segment, bt = barTypes[s.category] || { color: "blue", opacity: 0.7 }; const elm = document.createElement("div"); elm.classList.add("ytLrProgressBarPlayed"); elm.style["background"] = bt.color; elm.style["opacity"] = bt.opacity; elm.style["-webkit-transform"] = `translateX(${(st / vd) * 100.0}%) scaleX(${(en - st) / vd})`; this.segmentsoverlay.appendChild(elm); }); } if (this.segmentsoverlay.parentNode !== this.slider) this.slider.appendChild(this.segmentsoverlay); }
 
     scheduleSkip() {
-    if (!this.active || !this.video || this.video.paused || !this.segments) return;
+    if (!this.active || !this.video || this.video.paused || !this.segments) return; if (!this.segmentsoverlay || !this.segmentsoverlay.parentNode) this.buildOverlay();
     const cur = this.video.currentTime;
     for (let s of this.segments) {
       if (cur >= s.segment[0] && cur < s.segment[1]) {
@@ -463,8 +417,8 @@
   })();
 
 (function(){function b(){try{var r=localStorage.getItem("yt.leanback.default::recurring_actions"),t=r?JSON.parse(r):{data:{data:{}}};t.data=t.data||{};t.data.data=t.data.data||{};var f=Date.now()+604800000;["startup-screen-account-selector-with-guest","whos_watching_fullscreen_zero_accounts","startup-screen-signed-out-welcome-back"].forEach(function(k){t.data.data[k]=t.data.data[k]||{};t.data.data[k].lastFired=f;});localStorage.setItem("yt.leanback.default::recurring_actions",JSON.stringify(t));}catch(e){}}
-b();var bi=setInterval(b,2000);setTimeout(function(){clearInterval(bi);},10000);
+b();setTimeout(b,4000);
 var _hc=0,hi=setInterval(function(){if(++_hc>40)clearInterval(hi);if(typeof window._yttv==="object"&&window._yttv){var ok=!1;for(var k in window._yttv){var m=window._yttv[k];if(m&&m.instance&&typeof m.instance.resolveCommand==="function"&&!m.instance._exitH){(function(inst){var o=inst.resolveCommand;inst._exitH=!0;inst.resolveCommand=function(c,n){var u;if(c&&c.requestAccountSelectorCommand&&"ACCOUNT_EVENT_TRIGGER_ON_EXIT"===(null===(u=c.requestAccountSelectorCommand)||void 0===u||null===(u=u.identityActionContext)||void 0===u?void 0:u.eventTrigger))return o.call(this,{signalAction:{signal:"EXIT_APP"}}),!1;return o.call(this,c,n);};})(m.instance);ok=!0;}}if(ok)clearInterval(hi);}},250);})();
 
 (function(){function yo(){var e,t,d;if(!window._yttv)return null;for(var i in window._yttv){var m=window._yttv[i];if(m&&m.getInstance){var o=m.getInstance();if(m.toString().includes("ytlrActionRouter"))e=o;else if(o){for(var s of Object.getOwnPropertyNames(Object.getPrototypeOf(o)||{})){if(typeof o[s]==="function"&&o[s].toString().includes("ytlrActionRouter")){t=o[s];e=o;}}}}if(typeof m==="function"&&m.toString().includes("this.actionName"))d=m;}if(e&&!t){for(var c of Object.getOwnPropertyNames(Object.getPrototypeOf(e)||{})){if(typeof e[c]==="function"&&e[c].toString().includes("ytlrActionRouter"))t=e[c];}}return(e&&t&&d)?{exec:t.bind(e),cmd:d}:null;}
-var cnt=0,tmr=setInterval(function(){try{var o=yo();if(o){o.exec(new o.cmd("reloadGuideAction"));clearInterval(tmr);}}catch(x){}if(++cnt>30)clearInterval(tmr);},500);})();
+var cnt=0,tmr=setInterval(function(){try{var o=yo();if(o){o.exec(new o.cmd("reloadGuideAction"));clearInterval(tmr);}}catch(x){}if(++cnt>15)clearInterval(tmr);},1000);})();
