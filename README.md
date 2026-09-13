@@ -1,4 +1,6 @@
-# TizenCobalt made and optimised for my own tv and mibox s gen 3, not sure if it will work on other devices. wanted to share it with the community.
+# TizenCobalt
+
+Made and optimised for my own tv and mibox s gen 3, not sure if it will work on other devices. wanted to share it with the community.
 
 Optimized mod of [TizenTubeCobalt](https://github.com/reisxd/TizenTubeCobalt) by `@reisxd`.
 
